@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CS 180 Project 1: Colorizing the Prokudin-Gorskii Photo Collection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: antiquewhite;
+        }
+
+        header {
+            background-color: #6dc070;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        section {
+            padding: 20px;
+        }
+
+        img {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            display: block;
+            margin: 0 auto 20px;
+        }
+
+        /* Styling for the table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        td img {
+            max-width: 500px;
+            height: auto;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Main Header -->
+    <header>
+        <h1>CS 180 Project 1: Colorizing the Prokudin-Gorskii Photo Collection</h1>
+    </header>
+    
+    <section>
+        <h2>Overview</h2>   
+        <p> 
+            This project was inspired by Sergei Mikhailovich Prokudin-Gorskii's (1863-1944) dream of creating color photographs at a time before 
+            this technology was available. In order to do this, he took gray-scale images with three different filters: red, blue and green, in 
+            hopes that one day we'd have the technology to stack these images together to produce a colored photograph. 
+        </p>
+        <p>
+            With his digitized photographs and the technology we have today, this can easily done. However due to being taken separately and the nature
+            of the digitization, these images are not perfectly aligned. The goal of this project was to design and implement an algorithm that would
+            align these images and stack them to produce a final RGB image.
+        </p>
+
+        <h2>Approach</h2>   
+        <p> 
+            In order to do this, the blue filter image was chosen as a baseline and the red and green filter images were perturbed in several directions
+            to see which positioning was most accurate. The original metric used to determine the quality of aligned was normalized cross-correlation (NCC).
+            While for many images NCC was able to produce decent reconstructions, there was often a "shadow" of another image filter that could be seen. These
+            were more prominent on some images than others. Additionally NCC, was slow to compute. So ultimately a metric known as the Structural Similarity 
+            Index (SSIM) was used, which overall produced much better results.
+        </p> 
+        <p>
+            For the smaller .jpg images, perturbing the red/green image in a range of [-15, 15] pixels in both the x and y directions, and applying the metric to compare 
+            was fairly quick. However for the larger .tif images, this computation took much longer and was inefficient. To remedy this an image pyramid was 
+            implemented, in which the image was recursivley downscaled by a factor of 2 until it reached a size where its max dimension was no more than 200 pixels.
+            Then at this lowest level, the metric was computed on perturbations in the range of [-15, 15] pixels. After finding the optimal displacement, the program would
+            return this displacement and send it back up one level where the image had twice the resolution. Here the returned displacement was multiplied by two (to account
+            for the upscaling of the image) and then the metric was recomputed on perturbations of the green/red image in the range of [-1, 1] pixels from the previously the 
+            previously returned displacement. Then the program would repeat this process and keep going up until it returned to the original image's size. This ultimately made
+            computing the alignment for the larger .tif file to be approximately 20 seconds.
+        </p>
+
+        <h2>Aligned Images</h2>
+        <h3>Smaller JPG Files</h3>
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/cathedral.jpg alt="Cathedral">
+                        <figcaption><b>Cathedral</b> - <u>Green Disp</u>: (2, 5), <u>Red Disp</u>: (3, 12)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/monastery.jpg alt="Monastery">
+                        <figcaption><b>Monastery</b> - <u>Green Disp</u>: (2, -3), <u>Red Disp</u>: (2, 3)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/tobolsk.jpg alt="Tobolsk">
+                        <figcaption><b>Cathedral</b> - <u>Green Disp</u>: (2, 3), <u>Red Disp</u>: (3, 6)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h3>Larger TIF Files</h3>
+        <table>
+            <!-- Row 1 -->
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/church.jpg alt="Cathedral">
+                        <figcaption><b>Church</b> - <u>Green Disp</u>: (3, 25), <u>Red Disp</u>: (-4, 58) </figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/emir.jpg alt="Emir">
+                        <figcaption><b>Emir</b> - <u>Green Disp</u>: (21, 50), <u>Red Disp</u>: (40, 105) </figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/harvesters.jpg alt="Harvesters">
+                        <figcaption><b>Harvesters</b> - <u>Green Disp</u>: (14, 59), <u>Red Disp</u>: (11, 122)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <!-- Row 2 -->
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/icon.jpg alt="Icon">
+                        <figcaption><b>Icon</b> - <u>Green Disp</u>: (16, 39), <u>Red Disp</u>: (23, 89) </figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/lady.jpg alt="Lady">
+                        <figcaption><b>Lady</b> - <u>Green Disp</u>: (8, 57), <u>Red Disp</u>: (12, 119) </figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/melons.jpg alt="Melons">
+                        <figcaption><b>Melons</b> - <u>Green Disp</u>: (10, 87), <u>Red Disp</u>: (12, 178)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+
+            <!-- Row 3 -->
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/onion_church.jpg alt="Onion Church">
+                        <figcaption><b>Onion Church</b> - <u>Green Disp</u>: (25, 52), <u>Red Disp</u>: (35, 108) </figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/sculpture.jpg alt="Sculpture">
+                        <figcaption><b>Sculpture</b> - <u>Green Disp</u>: (-11, 33), <u>Red Disp</u>: (-27, 140) </figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/self_portrait.jpg alt="Self Portrait">
+                        <figcaption><b>Self Portrait</b> - <u>Green Disp</u>: (28, 78), <u>Red Disp</u>: (36, 175)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            
+            <!-- Row 3 -->
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/three_generations.jpg alt="Three Generations">
+                        <figcaption><b>Three Generations</b> - <u>Green Disp</u>: (13, 55), <u>Red Disp</u>: (9, 112) </figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/train.jpg alt="Train">
+                        <figcaption><b>Train</b> - <u>Green Disp</u>: (1, 41), <u>Red Disp</u>: (29, 85) </figcaption>
+                    </figure>
+                </td>
+            </tr>
+
+        </table>
+        
+        <h3>Additional Images</h3>
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/dalmatovo.jpg alt="Dalmatovo">
+                        <figcaption><b>Portret Prepodobnago Dalmatovo</b> - <u>Green Disp</u>: (-15, 70), <u>Red Disp</u>: (-32, 145)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/porogi_na.jpg alt="Porogi Na">
+                        <figcaption><b>Porogi na riekie Sunie</b> - <u>Green Disp</u>: (-15, 22), <u>Red Disp</u>: (-27, 97)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/yurezan_bridge.jpg alt="Yurezan Bridge">
+                        <figcaption><b>On the way to Yurezan Bridge</b> - <u>Green Disp</u>: (2, 3), <u>Red Disp</u>: (3, 6)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+
+    </section>
+
+</body>
+</html>
