@@ -55,6 +55,7 @@
     <!-- Main Header -->
     <header>
         <h1>CS 180 Project 1: Colorizing the Prokudin-Gorskii Photo Collection</h1>
+        <h2>Teja Kanthamneni</h2>
     </header>
     
     <section>
@@ -65,7 +66,7 @@
             hopes that one day we'd have the technology to stack these images together to produce a colored photograph. 
         </p>
         <p>
-            With his digitized photographs and the technology we have today, this can easily done. However due to being taken separately and the nature
+            With his digitized photographs and the technology we have today, this can be easily done. However due to being taken separately and the nature
             of the digitization, these images are not perfectly aligned. The goal of this project was to design and implement an algorithm that would
             align these images and stack them to produce a final RGB image.
         </p>
@@ -75,13 +76,13 @@
             In order to do this, the blue filter image was chosen as a baseline and the red and green filter images were perturbed in several directions
             to see which positioning was most accurate. The original metric used to determine the quality of aligned was normalized cross-correlation (NCC).
             While for many images NCC was able to produce decent reconstructions, there was often a "shadow" of another image filter that could be seen. These
-            were more prominent on some images than others. Additionally NCC, was slow to compute. So ultimately a metric known as the Structural Similarity 
+            were more prominent on some images than others. Additionally, NCC was slow to compute. So ultimately a metric known as the Structural Similarity 
             Index (SSIM) was used, which overall produced much better results.
         </p> 
         <p>
             For the smaller .jpg images, perturbing the red/green image in a range of [-15, 15] pixels in both the x and y directions, and applying the metric to compare 
             was fairly quick. However for the larger .tif images, this computation took much longer and was inefficient. To remedy this an image pyramid was 
-            implemented, in which the image was recursivley downscaled by a factor of 2 until it reached a size where its max dimension was no more than 200 pixels.
+            implemented, in which the image was recursively downscaled by a factor of 2 until it reached a size where its max dimension was no more than 200 pixels.
             Then at this lowest level, the metric was computed on perturbations in the range of [-15, 15] pixels. After finding the optimal displacement, the program would
             return this displacement and send it back up one level where the image had twice the resolution. Here the returned displacement was multiplied by two (to account
             for the upscaling of the image) and then the metric was recomputed on perturbations of the green/red image in the range of [-1, 1] pixels from the previously the 
