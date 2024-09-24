@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CS 180 Project 2: Fun with Filters Frequencies</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: antiquewhite;
+        }
+
+        header {
+            background-color: #6dc070;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        code {
+            color: rgb(23, 71, 246);
+            font-size: 1;
+        }
+
+        section {
+            padding: 20px;
+        }
+
+        img {
+            width: 100%;
+            max-width: 300px;
+            height: auto;
+            display: block;
+            margin: 0 auto 20px;
+            /* text-align: center; */
+        }
+        img {
+            width: 100%;
+            max-width: 300px;
+            height: auto;
+            display: block;
+            margin: 0 auto 20px;
+            /* text-align: center; */
+        }
+
+        /* Styling for the table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table, th, td {
+            border: 1px solid antiquewhite;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        td img {
+            max-width: 300px;
+            height: auto;
+        }
+
+        figure {
+            text-align: center; /* Centers the image and caption */
+        }
+
+        figcaption {
+            margin-top: 8px; /* Adds a little space between image and caption */
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Main Header -->
+    <header>
+        <h1>CS 180 Project 2: Fun with Filters Frequencies</h1>
+        <h2>Teja Kanthamneni</h2>
+    </header>
+    
+    <section>
+        <h2>Overview</h2>   
+        <p> 
+            This project explores techniques in image processing that involve examining and analyzing an images' frequencies. Some of the techniques that are 
+            implemented here include edge detection, blurring, sharpening, image hybridization, and image blending. Each of these techniques' implementation
+            will be discussed below.
+        </p>
+
+
+        <h2>Finite Difference Operator</h2>
+        <p>
+            In order to create an edge detector, we first made use of the finite difference operators D<sub>x</sub> = [1, -1] and D<sub>y</sub> = [1, -1]<sup>T</sup>
+            to find the partial derivatives of our image. By convolving D<sub>x</sub> with our image, we are able to find sharp changes in pixel values of neighboring
+            horizontal pixels, indicating the prescence of a vertical edge. Likewise, convolving D<sub>y</sub> with our image allows us to determine the locations of 
+            horizontal edges. These represent the partial derivatives of the images in the x and y Then to find the edges throughout the image we can determine the 
+            magnitude of the each pixel's gradient. We do this by computing &#8730;(D<sub>x</sub><sup>2</sup> + D<sub>y</sub><sup>2</sup>) for each pixel. Then to 
+            filter out noise we binarize the image, setting a threshold for the magnitude of the gradient.
+        </p>
+
+        <figure>
+            <img src=./assests/images/cameraman.png alt="Camerman">
+            <figcaption>Original Cameraman Image</figcaption>
+        </figure>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/finite_diff/cameraman_dx.png alt="dx">
+                        <figcaption>D<sub>x</sub> Derivative</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/finite_diff/cameraman_dy.png alt="dy">
+                        <figcaption>D<sub>y</sub> Derivative</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/finite_diff/cameraman_og_grad.png alt="Tobolsk">
+                        <figcaption>Gradient Magnitude</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/finite_diff/cameraman_og_grad_bin.png alt="Tobolsk">
+                        <figcaption>Binarized Gradient (Threshold = 60)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Derivative of Gaussian (DoG)</h2>
+        <p>
+           However, the edge image created by using the difference operators binarized gradient magnitude is a bit noisy. In order to produce to image above a gradient
+           magnitude threshold of 60 was required and we therefore have fainter lines denoting the edges. We can improve upon this by convolving the image with a Gaussian
+           filter and then use our difference operators. As seen below, the derivative images are much less noisy and we can use a threshold of 20 to obtain much thicker 
+           lines on our edge image.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/blur_grad/cameraman_blur_dx.png alt="dx">
+                        <figcaption>D<sub>x</sub> Derivative</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/blur_grad/cameraman_blur_dy.png alt="dy">
+                        <figcaption>D<sub>y</sub> Derivative</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/blur_grad/cameraman_blur_grad.png alt="Tobolsk">
+                        <figcaption>Gradient Magnitude</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/blur_grad/cameraman_blur_grad_bin.png alt="Tobolsk">
+                        <figcaption>Binarized Gradient (Threshold = 20)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <p>
+            Note that we can simplify the process by first convolving our Gaussian filter with finite difference operators D<sub>x</sub> and
+            D<sub>y</sub> to get the derivative of the Gaussian kernel with respect to x and y, DoG<sub>x</sub> and DoG<sub>y</sub>. Then when 
+            we convolve this our camera man image, we nearly identical results. There are not many visible differences between the edge images 
+            created this and the previous method.
+         </p>
+
+         <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/DoG/cameraman_DoGx.png alt="dx">
+                        <figcaption>DoG<sub>x</sub> Derivative</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/DoG/cameraman_DoGy.png alt="dy">
+                        <figcaption>DoG<sub>y</sub> Derivative</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/DoG/cameraman_DoG.png alt="Tobolsk">
+                        <figcaption>DoG Gradient Magnitude</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/DoG/cameraman_DoG_bin_1.png alt="Tobolsk">
+                        <figcaption>DoG Binarized Gradient (Threshold = 20)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/DoG/DoGx.png alt="dx">
+                        <figcaption>DoG x derivative</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_1/DoG/DoGy.png alt="dy">
+                        <figcaption>DoG y derivative</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+
+        <h2>Image Sharpening</h2>
+        <p>
+            In this section, we implement an unsharp mask filter, which is used to artificially make an image look sharper. We got about this by
+            first blurring an image by a Gaussian kernel, which acts as a low pass filter. Then in order to obtain the high frequencies that were 
+            lost, we perform a pixel-wise substraction of the blurred image from the original image. Then with this high frequency component, we
+            multiply is by a scaling factor &alpha; and add it back to the original image. This enhances the high frequency components of the 
+            orignal image, making it appear sharper. Note that the difference images were min-max normalized for visibility purposes. Due to the 
+            difference images containing values less than 0, the values would get clipped to 0 when displaying the image, making it very dark.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/images/taj.jpg alt="dx">
+                        <figcaption>Taj Mahal</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/sharp_imgs/taj/taj_blur.png alt="dy">
+                        <figcaption>Blurred Image</figcaption>
+                    </figure>
+                </td>
+                <!-- <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/sharp_imgs/taj/taj_diff.png alt="dy">
+                        <figcaption>Difference Image</figcaption>
+                    </figure>
+                </td> -->
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/sharp_imgs/taj/taj_diff_norm.png alt="Tobolsk">
+                        <figcaption>Difference Image Min-Max Normalized</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/sharp_imgs/taj/taj_shar_a2.png alt="Tobolsk">
+                        <figcaption>Sharpened Image (&alpha; = 2)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/images/moon.jpg alt="dx">
+                        <figcaption>Moon</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/sharp_imgs/moon/moon_blur.png alt="dy">
+                        <figcaption>Blurred Image</figcaption>
+                    </figure>
+                </td>
+                <!-- <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/sharp_imgs/moon/moon_diff.png alt="dy">
+                        <figcaption>Difference Image</figcaption>
+                    </figure>
+                </td> -->
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/sharp_imgs/moon/moon_diff_norm.png alt="Tobolsk">
+                        <figcaption>Difference Image Min-Max Normalized</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/sharp_imgs/moon/moon_sharp_a5.png alt="Tobolsk">
+                        <figcaption>Sharpened Image (&alpha; = 5)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <p>
+            Additionally, an experiment was performed to see how well this sharpening technique could do in trying to recover lost information
+            due to a blur. To do this an image was blurred once, and then the above process was applied to the new blurred image (i.e. blurred again
+             and then substracted). As the seen in the below results, this sharpening technique does do a decent job rehighlighting some features. 
+             However, since some of the finer 
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/images/white_house.jpg alt="dx">
+                        <figcaption>Moon</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/sharp_imgs/white_house/white_house_blur.png alt="dy">
+                        <figcaption>Blurred Image (Base for Process)</figcaption>
+                    </figure>
+                </td>
+                <!-- <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/sharp_imgs/white_house/white_house_diff.png alt="dy">
+                        <figcaption>Difference Image</figcaption>
+                    </figure>
+                </td> -->
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/sharp_imgs/white_house/white_house_diff_norm.png alt="Tobolsk">
+                        <figcaption>Difference Image Min-Max Normalized</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/sharp_imgs/white_house/white_house_resharpen_a3.png alt="Tobolsk">
+                        <figcaption>Sharpened Image (&alpha; = 3)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+
+        <h2>Hybrid Images</h2>
+        <p>
+            The process of creating a hybrid image entails running one image through a low pass filter and another through a high pass filter 
+            and overlaying the two. From afar the image will look like the one passed through the low pass filter bc at greater distances, 
+            the lower frequncies of an image are more apparent. But then as you get closer to the image will begin to look like the one passed 
+            through the high pass filter bc the higher frequncies of the image become more apparent.
+        </p>
+        <p>
+            This was implemented by selecting a &sigma; <sub>1</sub>, a &sigma;<sub>2</sub>, and an &alpha;. The Gaussian filter applied to the first 
+            image meant to pass through an LPF had a kernel size of 10 * &sigma;<sub>1</sub> and a standard deviation of &sigma;<sub>1</sub>. For the 
+            second image, its high frequency components were extracted in the same manner as done in the previous part for the image sharpening technique  
+            (original_img - blurred_img) = hi_freq_im. The Gaussian filter used for this image had a kernel size of 10 * &sigma;<sub>2</sub> and a 
+            standard deviation of &sigma;<sub>2</sub>. Then &alpha; was used to compute a multiplier for the high frequency image when adding the two 
+            together. For gray-scale images, the two images were averaged so the image did not appear too dark. For color images, this process was applied 
+            to each of the low pass image's RBG channels and were combined with the gray version of the high pass filter. This method seemed to get the best
+            qualitative results out of the possible combinations of color selection. However, when the colors of the two images did not match, this was 
+            apparent.
+
+        <h2>Derek and Nutmeg (Success)</h2>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/images/DerekPicture.jpg alt="dx">
+                        <figcaption>Low Freq Img: Derek (&sigma;<sub>1</sub> = 9)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/images/nutmeg.jpg alt="dy">
+                        <figcaption>High Freq Img: Nutmeg (&sigma;<sub>2</sub> = 5)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/derek_nutmeg/derek_nutmeg_gray.png alt="dy">
+                        <figcaption>Hybrid Image Gray (&alpha; = 2.5)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/derek_nutmeg/derek_nutmeg_color.png alt="dy">
+                        <figcaption> Hybrid Image Color (&alpha; = 2.5)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Mario Bros. (Success)</h2>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/images/mario.jpg alt="dx">
+                        <figcaption>Low Freq Img: Mario (&sigma;<sub>1</sub> = 8)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/images/luigi.jpg alt="dy">
+                        <figcaption>High Freq Img: Luigi (&sigma;<sub>2</sub> = 6)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/mario_bros/luigi_mario_gray.png alt="dy">
+                        <figcaption>Hybrid Image Gray (&alpha; = 1)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/mario_bros/luigi_mario.png alt="dy">
+                        <figcaption> Hybrid Image Color (&alpha; = 1)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/images/luigi.jpg alt="dx">
+                        <figcaption>Low Freq Img: Luigi (&sigma;<sub>1</sub> = 8)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/images/mario.jpg alt="dy">
+                        <figcaption>High Freq Img: Mario (&sigma;<sub>2</sub> = 6)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/mario_bros/mario_luigi_gray.png alt="dy">
+                        <figcaption>Hybrid Image Gray (&alpha; = 1)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/mario_bros/mario_luigi.png alt="dy">
+                        <figcaption> Hybrid Image Color (&alpha; = 1)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <p>
+            This result was my favorite so a Fourier analysis was additionally performed on each of these images. The original images' Fourier transfrom 
+            was visualized before and after filtering, and then finally once they were combined. This Fourier analysis is for the hybrid image composed of 
+            the low frequency Mario and the high frequency Luigi. 
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/mario_bros/fft_mario_1.png alt="dx">
+                        <figcaption>Low Freq Img: Mario (Original)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/mario_bros/fft_mario_lpf_1.png alt="dy">
+                        <figcaption>Low Freq Img: Mario (Filtered)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/mario_bros/fft_luigi_1.png alt="dy">
+                        <figcaption>High Freq Img: Luigi (Original)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/mario_bros/fft_luigi_hpf_1.png alt="dy">
+                        <figcaption>High Freq Img: Luigi (Filtered)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <figure>
+            <img src=./assests/output/Part_2/hybrid_imgs/mario_bros/fft_luigi_mario_2.png alt="Luigi_Mario">
+            <figcaption>Hybrid Image</figcaption>
+        </figure>
+
+
+
+
+        <h2>Kirby & Meta Knight (Partial Failure)</h2>
+        <p>
+            This hybrid is deemed as a partial failure because while the gray-scale hybrid image works pretty well, the color hybrid does not.
+            Kirby's pink color is too prominent so Meta Knight's high frequencies are not as apparent even close up.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/images/kirby.jpg alt="dx">
+                        <figcaption>Low Freq Img: Kirby (&sigma;<sub>1</sub> = 7)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/images/meta_knight.jpg alt="dy">
+                        <figcaption>High Freq Img: Meta Knight (&sigma;<sub>2</sub> = 4)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/meta_knight_kirby/meta_kinght_kirby_gray.png alt="dy">
+                        <figcaption>Hybrid Image Gray (&alpha; = .5)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/meta_knight_kirby/meta_kinght_kirby_color.png alt="dy">
+                        <figcaption> Hybrid Image Color (&alpha; = 1)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+
+        <h2>Lion & Tiger (Failure)</h2>
+        <p>
+            This hybrid is deemed as a failure because while the color and gray-scale hybrid images only worked decently for one of the images.
+            In the color hybrid, the low frequency tiger relies too much on its color to be made out from afar. In the gray-scale image, the 
+            patterns on the tiger blend too much with the background of the image so it is difficult to distinguish. Additionally, in the colored 
+            image, the high frequency lion is too difficult to make out with the color of the tiger dominating the image.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/images/tiger.jpg alt="dx">
+                        <figcaption>Low Freq Img: Tiger (&sigma;<sub>1</sub> = 5)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/images/lion.jpg alt="dy">
+                        <figcaption>High Freq Img: Lion (&sigma;<sub>2</sub> = 2)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/lion_tiger/lion_tiger_gray.png alt="dy">
+                        <figcaption>Hybrid Image Gray (&alpha; = 1.2)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_2/hybrid_imgs/lion_tiger/lion_tiger_color.png alt="dy">
+                        <figcaption> Hybrid Image Color (&alpha; = 1.2)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Gaussian and Laplacian Stacks</h2>
+        <p>
+            A Gaussian stack is created by repeatedly blurring an image with a Guassian kernel without downsampling so the image at each level of 
+            the stack will be the same size. From here a Laplacian stack can be created by substracting images in the Guassian stack. For example, 
+            the level 0 Laplcian stack is computed by Gaussian level 0 minus Gaussian level 1. Then the final image in the Laplacian stack is the 
+            same as the last image in the Gaussian stack. Note that the images in the Laplacian stack below have been min-max normalized for purposes of 
+            display.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/ap_g_level_0.jpg alt="dx">
+                        <figcaption><u>Apple</u>: Gaussian Level 0</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/ap_g_level_1.jpg alt="dy">
+                        <figcaption><u>Apple</u>: Gaussian Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/ap_g_level_2.jpg alt="dy">
+                        <figcaption><u>Apple</u>: Gaussian Level 2</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/ap_g_level_3.jpg alt="dy">
+                        <figcaption><u>Apple</u>: Gaussian Level 3</figcaptio>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/ap_g_level_4.jpg alt="dy">
+                        <figcaption><u>Apple</u>: Gaussian Level 4</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/ap_g_level_5.jpg alt="dy">
+                        <figcaption><u>Apple</u>: Gaussian Level 5</figcaption>
+                    </figure>
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/ap_l_level_0.jpg alt="dx">
+                        <figcaption><u>Apple</u>: Laplacian Level 0</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/ap_l_level_1.jpg alt="dy">
+                        <figcaption><u>Apple</u>: Laplacian Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/ap_l_level_2.jpg alt="dy">
+                        <figcaption><u>Apple</u>: Laplacian Level 2</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/ap_l_level_3.jpg alt="dy">
+                        <figcaption><u>Apple</u>: Laplacian Level 3</figcaptio>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/ap_l_level_4.jpg alt="dy">
+                        <figcaption><u>Apple</u>: Laplacian Level 4</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/ap_l_level_5.jpg alt="dy">
+                        <figcaption><u>Apple</u>: Laplacian Level 5</figcaption>
+                    </figure>
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/or_g_level_0.jpg alt="dx">
+                        <figcaption><u>Orange</u>: Gaussian Level 0</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/or_g_level_1.jpg alt="dy">
+                        <figcaption><u>Orange</u>: Gaussian Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/or_g_level_2.jpg alt="dy">
+                        <figcaption><u>Orange</u>: Gaussian Level 2</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/or_g_level_3.jpg alt="dy">
+                        <figcaption><u>Orange</u>: Gaussian Level 3</figcaptio>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/or_g_level_4.jpg alt="dy">
+                        <figcaption><u>Orange</u>: Gaussian Level 4</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/or_g_level_5.jpg alt="dy">
+                        <figcaption><u>Orange</u>: Gaussian Level 5</figcaption>
+                    </figure>
+                </td>
+            </tr>
+
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/or_l_level_0.jpg alt="dx">
+                        <figcaption><u>Orange</u>: Laplacian Level 0</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/or_l_level_1.jpg alt="dy">
+                        <figcaption><u>Orange</u>: Laplacian Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/or_l_level_2.jpg alt="dy">
+                        <figcaption><u>Orange</u>: Laplacian Level 2</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/or_l_level_3.jpg alt="dy">
+                        <figcaption><u>Orange</u>: Laplacian Level 3</figcaptio>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/or_l_level_4.jpg alt="dy">
+                        <figcaption><u>Orange</u>: Laplacian Level 4</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/or_l_level_5.jpg alt="dy">
+                        <figcaption><u>Orange</u>: Laplacian Level 5</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Multiresolution Blending</h2>
+        <p>
+            The cool thing about Laplacian stacks is that we can use them for multiresolution blending of two images. The famous example of this is 
+            the orapple, an image that is left half apple and right half orange, and it boundary between the two is blended quite nicely. This is done 
+            by performing a blending on pairs of images from each Laplacian stack. This is done because features of different frequencies require a
+            different blurred mask in order for the features to appear smoothly. So by creating Laplacian stacks of both images, we effectively perform 
+            a band pass filtration and can blend each frequency range independently. Then afterward we can collapse the blended images back into a single 
+            blended image. For gray-scale images this is simply done on the single channel. For color images, this is done individually for each of the 
+            RGB channels at each layer. The Gaussian kernel used to generate the stacks is of size 5 * &sigma; with a standard deviation of &sigma;. 
+            Additionally, N is defined as the max level of the Gaussian/Laplacian stacks.
+        </p>
+
+        <p>
+            The creation of the masks for this blending can be done by creating a Gaussian stack of an initial mask. For the following two sets of blending, 
+            an initial mask was created in the size of the images such that the left half of the mask was all 1s (white) and the left half was all 0s (black).
+            Then the same Gaussian that was used the blur the images that we are blending was used to blur the mask. Then each level of the mask's Gaussian 
+            stack was applied to the images on the same level in the Laplacian stack. At each level, the combined image was computed with the following: 
+            combined_img = mask * left_img + (1 - mask) * right_img.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/mask_level_0.jpg alt="dx">
+                        <figcaption>Mask Level 0</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/mask_level_1.jpg alt="dy">
+                        <figcaption>Mask Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/mask_level_2.jpg alt="dy">
+                        <figcaption>Mask Level 2</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/mask_level_3.jpg alt="dy">
+                        <figcaption>Mask Level 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/mask_level_4.jpg alt="dy">
+                        <figcaption>Mask Level 4</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/mask_level_5.jpg alt="dy">
+                        <figcaption>Mask Level 5</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Orapple</h2>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/images/spline/apple.jpeg alt="dx">
+                        <figcaption>Apple (Left)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/images/spline/orange.jpeg alt="dy">
+                        <figcaption>Orange (Right)</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/apple_orange/orapple.png alt="dy">
+                        <figcaption>Blended (N = 5, &sigma; = 8)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Blind Artists</h2>
+        <p>
+            Below is a combination of pictures of two paintings I viewed in an art gallery in New York in the summer of 2024. For context, an artist painted 
+            hyper-realistic portraits of people who have been blind since birth. Then afterward the subjects were instructed to paint over the painting with 
+            their interpretation of themselves. Overall I think this blending was successful. There are a couple inconsistencies with the mouths and the tops 
+            of the paintings due to alignment of the picutres, but most of it is blended very smoothly.
+        </p>
+        
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/images/blind_art_1.jpg alt="dx">
+                        <figcaption>Left Painting</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/images/blind_art_2.jpg alt="dy">
+                        <figcaption>Right Painting</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/blind_1_blind_2/blind_1_blind_2.jpg alt="dy">
+                        <figcaption>Blended (N = 5, &sigma; = 10)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <figure>
+            <img src=./assests/output/Part_3:4/blind_1_blind_2/blind_art_stack.png alt="Camerman">
+            <figcaption>Blind Art Laplacian Stacks</figcaption>
+        </figure>
+
+        <h2>Milky New York (Irregular Mask)</h2>
+        <p>
+            Below is a combination of two pictures I took in the summer of 2024. One is a picture of the Milky Way view from Cherry Springs State Park 
+            in Pennsylvania. The other picture is of some buildings in New York City. I created a custom mask (a bit poorly) that would remove the sky 
+            of the New York picture and replace it with the sky of the Milky Way picture. My mask was not perfect and as a result the color of the blue 
+            sky was not entirely removed. But it ended creating a nice effect of a blue glow around the buildings.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/images/milky_way.jpg alt="dx">
+                        <figcaption>Milky Way</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/images/new_york.jpg alt="dy">
+                        <figcaption>New York</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/milky_ny/milky_ny.jpg alt="dy">
+                        <figcaption>Blended (N = 5, &sigma; = 3)</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/milky_ny/mask_level_0.jpg alt="dx">
+                        <figcaption>Mask Level 0</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/milky_ny/mask_level_1.jpg alt="dy">
+                        <figcaption>Mask Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/milky_ny/mask_level_2.jpg alt="dy">
+                        <figcaption>Mask Level 2</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/milky_ny/mask_level_3.jpg alt="dy">
+                        <figcaption>Mask Level 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/milky_ny/mask_level_4.jpg alt="dy">
+                        <figcaption>Mask Level 4</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assests/output/Part_3:4/milky_ny/mask_level_5.jpg alt="dy">
+                        <figcaption>Mask Level 5</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+
+    </section>
+
+</body>
+</html>

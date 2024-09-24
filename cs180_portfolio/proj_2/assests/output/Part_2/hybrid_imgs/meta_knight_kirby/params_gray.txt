@@ -1,0 +1,3 @@
+sigma1 = 7
+sigma2 = 4
+alpha = .5

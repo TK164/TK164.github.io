@@ -1,0 +1,3 @@
+sigma1 = 8
+sigma2 = 6
+alpha = 1
