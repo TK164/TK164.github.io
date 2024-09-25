@@ -93,10 +93,10 @@
         <p>
             In order to create an edge detector, we first made use of the finite difference operators D<sub>x</sub> = [1, -1] and D<sub>y</sub> = [1, -1]<sup>T</sup>
             to find the partial derivatives of our image. By convolving D<sub>x</sub> with our image, we are able to find sharp changes in pixel values of neighboring
-            horizontal pixels, indicating the prescence of a vertical edge. Likewise, convolving D<sub>y</sub> with our image allows us to determine the locations of 
-            horizontal edges. These represent the partial derivatives of the images in the x and y Then to find the edges throughout the image we can determine the 
-            magnitude of the each pixel's gradient. We do this by computing &#8730;(D<sub>x</sub><sup>2</sup> + D<sub>y</sub><sup>2</sup>) for each pixel. Then to 
-            filter out noise we binarize the image, setting a threshold for the magnitude of the gradient.
+            horizontal pixels, indicating the presence of a vertical edge. Likewise, convolving D<sub>y</sub> with our image allows us to determine the locations of 
+            horizontal edges. These represent the partial derivatives of the images in the x and y. Then to find the edges throughout the image, we can determine the 
+            magnitude of each pixel's gradient. We do this by computing &#8730;(D<sub>x</sub><sup>2</sup> + D<sub>y</sub><sup>2</sup>) for each pixel. Then to 
+            filter out noise, we binarize the image, setting a threshold for the magnitude of the gradient.
         </p>
 
         <figure>
@@ -135,7 +135,7 @@
 
         <h2>Derivative of Gaussian (DoG)</h2>
         <p>
-           However, the edge image created by using the difference operators binarized gradient magnitude is a bit noisy. In order to produce to image above a gradient
+           However, the edge image created by using the difference operators is a bit noisy. In order to produce the image above, a gradient
            magnitude threshold of 60 was required and we therefore have fainter lines denoting the edges. We can improve upon this by convolving the image with a Gaussian
            filter and then use our difference operators. As seen below, the derivative images are much less noisy and we can use a threshold of 20 to obtain much thicker 
            lines on our edge image.
@@ -173,8 +173,8 @@
         <p>
             Note that we can simplify the process by first convolving our Gaussian filter with finite difference operators D<sub>x</sub> and
             D<sub>y</sub> to get the derivative of the Gaussian kernel with respect to x and y, DoG<sub>x</sub> and DoG<sub>y</sub>. Then when 
-            we convolve this our camera man image, we nearly identical results. There are not many visible differences between the edge images 
-            created this and the previous method.
+            we convolve this with our camera man image, we get a nearly identical result. There are not many visible differences between the edge images 
+            created by this and the previous method.
          </p>
 
          <table class="center">
@@ -226,10 +226,10 @@
 
         <h2>Image Sharpening</h2>
         <p>
-            In this section, we implement an unsharp mask filter, which is used to artificially make an image look sharper. We got about this by
+            In this section, we implement an unsharp mask filter, which is used to artificially make an image look sharper. We go about this by
             first blurring an image by a Gaussian kernel, which acts as a low pass filter. Then in order to obtain the high frequencies that were 
             lost, we perform a pixel-wise substraction of the blurred image from the original image. Then with this high frequency component, we
-            multiply is by a scaling factor &alpha; and add it back to the original image. This enhances the high frequency components of the 
+            multiply it by a scaling factor &alpha; and add it back to the original image. This enhances the high frequency components of the 
             orignal image, making it appear sharper. Note that the difference images were min-max normalized for visibility purposes. Due to the 
             difference images containing values less than 0, the values would get clipped to 0 when displaying the image, making it very dark.
         </p>
@@ -307,7 +307,7 @@
         <p>
             Additionally, an experiment was performed to see how well this sharpening technique could do in trying to recover lost information
             due to a blur. To do this an image was blurred once, and then the above process was applied to the new blurred image (i.e. blurred again
-             and then substracted). As the seen in the below results, this sharpening technique does do a decent job rehighlighting some features. 
+             and then substracted). As seen in the below results, this sharpening technique does do a decent job rehighlighting some features. 
              However, since some of the finer details were lost in the inital blurring, they were not able to be recovered in the final image.
         </p>
 
@@ -316,7 +316,7 @@
                 <td>
                     <figure>
                         <img src=./assests/images/white_house.jpg alt="dx">
-                        <figcaption>Moon</figcaption>
+                        <figcaption>White House</figcaption>
                     </figure>
                 </td>
                 <td>
@@ -350,9 +350,9 @@
         <h2>Hybrid Images</h2>
         <p>
             The process of creating a hybrid image entails running one image through a low pass filter and another through a high pass filter 
-            and overlaying the two. From afar the image will look like the one passed through the low pass filter bc at greater distances, 
-            the lower frequncies of an image are more apparent. But then as you get closer to the image will begin to look like the one passed 
-            through the high pass filter bc the higher frequncies of the image become more apparent.
+            and overlaying the two. From afar the image will look like the one passed through the low pass filter because at greater distances, 
+            the lower frequncies of an image are more apparent. But then as you get closer to the image, it will begin to look like the one passed 
+            through the high pass filter because the higher frequncies of the image become more apparent.
         </p>
         <p>
             This was implemented by selecting a &sigma; <sub>1</sub>, a &sigma;<sub>2</sub>, and an &alpha;. The Gaussian filter applied to the first 
@@ -537,7 +537,7 @@
 
         <h2>Lion & Tiger (Failure)</h2>
         <p>
-            This hybrid is deemed as a failure because while the color and gray-scale hybrid images only worked decently for one of the images.
+            This hybrid is deemed as a failure because the color and gray-scale hybrid images only worked decently for one of the images.
             In the color hybrid, the low frequency tiger relies too much on its color to be made out from afar. In the gray-scale image, the 
             patterns on the tiger blend too much with the background of the image so it is difficult to distinguish. Additionally, in the colored 
             image, the high frequency lion is too difficult to make out with the color of the tiger dominating the image.
