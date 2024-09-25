@@ -742,7 +742,7 @@
         <h2>Multiresolution Blending</h2>
         <p>
             The cool thing about Laplacian stacks is that we can use them for multiresolution blending of two images. The famous example of this is 
-            the orapple, an image that is left half apple and right half orange, and it boundary between the two is blended quite nicely. This is done 
+            the orapple, an image that is left half apple and right half orange, and the boundary between the two is blended quite nicely. This is done 
             by performing a blending on pairs of images from each Laplacian stack. This is done because features of different frequencies require a
             different blurred mask in order for the features to appear smoothly. So by creating Laplacian stacks of both images, we effectively perform 
             a band pass filtration and can blend each frequency range independently. Then afterward we can collapse the blended images back into a single 
