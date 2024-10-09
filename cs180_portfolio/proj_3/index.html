@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CS 180 Project 3: Face Morphing and Modelling a Photo Collection</title>
+    <script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: antiquewhite;
+        }
+
+        header {
+            background-color: #6dc070;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        section {
+            padding: 20px;
+        }
+
+        img {
+            width: 100%;
+            max-width: 350px;
+            height: auto;
+            display: block;
+            margin: 0 auto 20px;
+        }
+
+        /* Styling for the table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        td img {
+            max-width: 350px;
+            height: auto;
+        }
+        figure {
+            text-align: center; 
+            margin: 0 auto; 
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Main Header -->
+    <header>
+        <h1>CS 180 Project 3: Face Morphing and Modelling a Photo Collection</h1>
+        <h2>Teja Kanthamneni</h2>
+    </header>
+    
+    <section>
+        <h2>Overview</h2>   
+        <p> 
+            This project explores the realm of image morphing, specifcally face morphing. To morph one image to another, we must first select correspondence
+            points on both images that correspond to the same feature. Then by using the Delaunay traingulation algorithm, we can create a triangle mesh over 
+            our images, which we will use to peform our warping, as it is a change of basis between these triangles. Then, we can cross-dissolve the pixel 
+            values of our warped images to create an intermediate image. These techniques were used to create a facial morphing animation, determine the mean 
+            face of a popluation, and extrapolate to create caricatures.
+        </p>
+
+        <h2>Defining Correspondences</h2>   
+        <p> 
+            For this project, I decided to create a morphing animation from my to my roommate Suchir's face. The first step in creating a facial morphing 
+            animation is to define correspondences between the two images. So I first cropped images of Suchir and me to be roughly the same size. Then using 
+            an online tool, I selected 53 correspondence points on our faces and additionally added the four corners of the image to create a total of 57 
+            correspondences to perform the morphing. Then I performed the Delaunay triangluation algorithm on the average of the points selected in both images. 
+            The triangulation was performed on the average of the points to minimize the warping on the triangles.
+        </p> 
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/teja_tri_mesh.png alt="teja_tri_mesh">
+                        <figcaption>Teja - Triangular Mesh</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/suchir_tri_mesh.png alt="suchir_tri_mesh">
+                        <figcaption>Suchir - Triangular Mesh</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+        
+        <h2>Computing the "Mid-Way Face"</h2>   
+        <p> 
+            To the compute the "mid-way face" between Suchir and me, I warped both of our faces to the average geometry and then cross-dissolved the pixel colors. 
+            The cross-dissolving of pixel colors was quite straight-forward, simply computing \(\frac{1}{2}\) (avg_im1 + avg_im2). However, the image warping was 
+            a more involved. Given the triangular mesh created by the Delaunay triangulation, I computed a change of basis between triangles. The change of basis 
+            was computed in the following manner: $$p_{im1} = T_1T_2^{-1} (p_{im2} - og_2) + og_1$$ where \(T_1\) is the transformation from a triangle in 
+            the original image to the standard basis,  \(T_2\) is the change of basis matrix from the corresponding triangle in the warped image to the standard 
+            basis, and \(og_1\) and \(og_2\) are the origins of the original and warped images, respectively. Note however, that \(p_{im1}\) is not guaranteed to 
+            be a discrete pixel value. To account for this, I performed a linear interpolation with pixels neighboring \(p_{im1}\), to determine the appropriate 
+            color value of pixel \(p_{im2}\).
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/inputs/teja.png alt="teja">
+                        <figcaption>Teja</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/teja_suchir_mean.jpg alt="teja_suchir_midway">
+                        <figcaption>Teja-Suchir Midway Face </figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/inputs/suchir.png alt="suchir">
+                        <figcaption>Suchir</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/teja_mean.jpg alt="teja_mean">
+                        <figcaption>Teja Warped to Average Geometry</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/suchir_mean.jpg alt="suchir_mean">
+                        <figcaption>Suchir Warped to Average Geometry</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>The Morph Sequence</h2>
+        <p>
+            Using the techinque explained above, I created a morphing animation from my to Suchir's face with a total of 45 frames. The geometry used was 
+            computed by a weight average of the correspondence points of the orginal images. For frame i: ((num_frames - 1 - i) * im1_pts + i * im2_pts) 
+            / (num_frames - 1). The frames were then put together into a gif that runs at 30 fps.
+        </p>
+
+        <figure>
+            <img src=./assets/teja_suchir_morph.gif alt="Morph">
+            <figcaption>Teja-Suchir Morph Sequence</figcaption>
+        </figure>
+
+    </section>
+
+    <h2>The "Mean Face" of a Population</h2>
+
+    <p>
+        Here, I computed the average face of Danes, using the Danes dataset which consists of 37 images. In the dataset, .asf files were provided that contained 
+        the correspondence points for each of the images. The points were given as a fraction of the images width/height, so I had to scale them accordingly. So 
+        after scaling down each Dane image (to increase efficiency), I scaled the data points accordingly and computed the mean across the 37 images. Then similar 
+        to what I did previously with my and Suchir's face, I warped each of the images to the average geometry and cross-dissolved the images to produce the average 
+        Danish face.
+    </p>
+    <table class="center">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/01-1m.bmp alt="ex1">
+                    <figcaption>Original</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/warp_01-1m.bmp alt="ex1_warp">
+                    <figcaption>Warped</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/05-1m.bmp alt="ex2">
+                    <figcaption>Original</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/warp_05-1m.bmp alt="ex2_warp">
+                    <figcaption>Warped</figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/06-1m.bmp alt="ex3">
+                    <figcaption>Original</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/warp_06-1m.bmp alt="ex3_warp">
+                    <figcaption>Warped</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/07-1m.bmp alt="ex4">
+                    <figcaption>Original</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/warp_07-1m.bmp alt="ex4_warp">
+                    <figcaption>Warped</figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <figure>
+        <img src=./assets/avg_dane.jpg alt="Average Dane">
+        <figcaption>Average Danish Face</figcaption>
+    </figure>
+
+    <p>
+        Additionally, I warped my face to the facial geometry average Dane and warped the average Dane to geometry of my face. Here I manually selected new 
+        correspondences for my image and the average dane due to the need to resize and crop both images for alignment.
+    </p>
+
+    <table class="center">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/teja_3.png alt="teja">
+                    <figcaption>Teja</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/teja_dane_corr.png alt="suchir_mean">
+                    <figcaption>Triangular Mesh on Teja</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/dane_teja_corr.png alt="suchir_mean">
+                    <figcaption>Triangular Mesh on Average Dane</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/avg_dane.png alt="Average Dane">
+                    <figcaption>Average Dane</figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <table class="center"> 
+        <td>
+            <figure>
+                <img src=./assets/teja2dane.jpg alt="suchir_mean">
+                <figcaption>Teja Warped to Average Dane Geometry</figcaption>
+            </figure>
+        </td>
+        <td>
+            <figure>
+                <img src=./assets/dane2teja.jpg alt="suchir_mean">
+                <figcaption>Average Dane Warped to Teja's Geometry</figcaption>
+            </figure>
+        </td>
+    </table>
+
+    <h2>Caricatures - Extrapolating from the Mean</h2>
+
+    <p>
+        I also created cariactures of my face by extroplating from the mean geometry between the average Dane and me. In order to do this, performed a weighted 
+        average of the two images' correspondence points where one of the weights was a negative value, and the other was greater than 2. In a gneral form, the 
+        weight average was computed by the following: new_pts = (&alpha; * teja_pts + &beta; * avg_dane_pts)/2, where &alpha; &lt; 0, &beta; &gt; 2, and &alpha; + 
+        &beta; = 2. After computing these points, I simply warped my face to the new geometry.
+    </p>
+
+    <table class="center">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/teja_caricature1.jpg alt="Caricature 1">
+                    <figcaption>Cariacture 1: &alpha; = -1, &beta; = 3</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/teja_caricature2.jpg alt="Caricature 2">
+                    <figcaption>Cariacture 2: &alpha; = 4, &beta; = -2</figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+
+    <h2>Bells and Whistles: Changing Ethnicity</h2>
+
+    <p>
+        Here I attempted to change my ethnicity by using an image of the average English male that I found online as a basis. First I rescaled and aligned 
+        both images, and then defined correspondences as done previously. I tried a couple of things out when doing this. I first just warped my face to the 
+        geometry of the average Englishman. Then I cross-dissolved this with the original average English male image, using the general formula 
+        combined_img = (&alpha; * warped_teja + &beta; * avg_englishman)/2, where &alpha;, &beta; &gt; 0, and &alpha; + &beta; = 1. Additionally, I tried warping 
+        the average Englishman to my face's geometry and similarly played around with the cross-dissolving ratios with the general formula 
+        combined_img = (&gamma; * warped_teja + &delta; * avg_englishman)/2, where &gamma;, &delta; &gt; 0, and &gamma; + &delta; = 1. The idea behind this was 
+        to see how changing my ethnicity would perform by only using geometry, only using the appearance (color), and a combination of both.
+        
+    </p>
+
+    <table class="center">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/teja_eng_shape.jpg alt="teja">
+                    <figcaption>Teja Warped to Average Englishman</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/teja_eng_cd1.jpg alt="teja">
+                    <figcaption>Cross Dissolve 1: &alpha; = 0.85, &beta; = 1.15</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/teja_eng_cd2.jpg alt="suchir_mean">
+                    <figcaption>Cross Dissolve 1: &alpha; = 0.65, &beta; = 1.35</figcaption>
+                </figure>
+            </td>
+            
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/eng_teja_shape.jpg alt="suchir_mean">
+                    <figcaption>Average Englishman Warped to Teja</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/eng_teja_cd1.jpg alt="suchir_mean">
+                    <figcaption>Cross Dissolve 1: &gamma; = 0.85, &delta; = 1.15</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/eng_teja_cd2.jpg alt="teja">
+                    <figcaption>Cross Dissolve 2: &gamma; = 0.55, &delta; = 1.45</figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+</body>
+</html>
