@@ -217,7 +217,7 @@
         <p>
             $$ \begin{bmatrix} a & b & c \\ d & e & f \\ g & h & 1 \end{bmatrix} \begin{bmatrix} x_1 \\ y_1 \\ 1 \end{bmatrix} = \begin{bmatrix} wx_2 \\ wy_2 \\ w \end{bmatrix}$$
         </p>
-        <p>We can then rewrite this matrix-vecotr equation to solve for unknown values in the matrix:</p>
+        <p>We can then rewrite this matrix-vector equation to solve for unknown values in the matrix:</p>
 
         <p>
             $$ \begin{bmatrix} x_1 & y_1 & 1 & 0 & 0 & 0 & -x_1x_2 & -y_1x_2 \\  0 & 0 & 0 & x_2 & y_2 & 1 & -x_1y_2 & -y_1y_2 \end{bmatrix} 
@@ -228,13 +228,16 @@
             So from here, we can vetically/horizontally stack the values of our correspondence points into the matrix and result vector in the above system. Now notice we have an overconstrained system 
             and we can use Least Squares to solve. This is beneficial as it will work to minimize any noise introduced due to slightly inaccurate selection of correspondence points.
         </p>
+        <p>
+            Now that we have the projective transformation, we can apply this matrix onto the points of one image to get the image warped to the perspective of the other image. 
+        </p>
 
         <h2>Image Rectification</h2>
         <p>
             One cool thing we can do with homographies is "rectify" images. Given an image and a known perspective we want to view it from, we can transform the image 
-            to that perspective to "rectify" it. This was done capturing images with objects that are known to squares and then computing the the image and the coordinates 
-            of a square with some side length \(d\): \([0, 0], [0, d], [d, d], [d, 0]\). This was performed on the image of the Toyota dealership and a image I took in 
-            my apartmnet's hallway.
+            to that perspective to "rectify" it. This was done capturing images with objects that are known to squares and then computing the homography between image and 
+            the coordinates of a square with some side length \(d\): \([0, 0], [0, d], [d, d], [d, 0]\). This was performed on the image of the Toyota dealership and a image 
+            I took in my apartmnet's hallway.
         </p>
         <table class="center">
             <tr>
@@ -270,7 +273,7 @@
         <p>
             After we've warped one image to the perspective of the other, the final step in creating our mosaic is to blend them. After expanding each image to include all 
             pixels in the bounding box of our final mosaic, I computed a distance transform, calculating the Euclidean distance from every pixel on the image to the closest 
-            black backgorund pixel. Below are the visualizations of these distance transforms for the glade images:
+            black background pixel. Below are the visualizations of these distance transforms for the glade images:
         </p>
 
         <table>
@@ -291,9 +294,9 @@
         </table>
 
         <p>
-            These transforms were used to create masks that would be used to the blend the images. The blending technique used was two-band blending, where a two-level 
+            These transforms were then used to create masks that would be used to the blend the images. The blending technique used was two-band blending, where a two-level 
             Laplacian stack was created and each frequecy level was blended independently. Some of the mosaics still have some artifcats where you can see that it is a 
-            stitching of two images. This was due to my iPhone camera changing the relative brightness in the iamges as it was rotated. Ideally, this brightness change 
+            stitching of two images. This was due to my iPhone camera changing the relative brightness in the images as it was rotated. Ideally, this brightness change 
             would not have been present, but ultimately it did not affect the quality of the images too much.
             Below are the final results of the blending:
         </p>
