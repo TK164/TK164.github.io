@@ -373,14 +373,14 @@
 
         <p>
             Above is the result of running the Harris corner detector on one of my sample images. Notice in the left image, that they are quite a lot of potential 
-            corners. In the right image, I displayed the 250 strongest corners has determined by the Harris corner detector's metric. So it is evident that we will need 
+            corners. In the right image, I displayed the 250 strongest corners as determined by the Harris corner detector's metric. So it is evident that we will need 
             to reduce the numbeer of candidate correspondences. However, it does not seem that simply choosing the strongest Harris corners is ideal.
         </p>
 
         <h2>Adaptive Non-Maximal Suppression (ANMS)</h2>
 
         <p>
-            Notice that the strongest corners in our image are very clustered together and if were to try to compute a homography using these points, it could be quite noisy. 
+            Notice that the strongest corners in our image are very clustered together and if we were to try to compute a homography using these points, it could be quite noisy. 
             Ideally, we have correspondence points that are spread out evenly across the image. To do this, I used a technique known as Adaptive Non-Maximal Suppression (ANMS) 
             which is described in 
              <a href="https://ieeexplore.ieee.org/document/1467310"><i>Multi-Image Matching using Multi-Scale Oriented Patches</i></a>. 
@@ -390,7 +390,7 @@
 
              where \(\mathcal{I}\) is the set of all candidate points. For this project I used \(c_{robust} = 0.9\) as suggested in the paper. Then we sort these points in 
              order of decreasing \(r_i\) to determine the best candidate points for computing a homography. Intuitively, what we're defining as the best correspondence 
-             candidates as points that locally dominant (in terms of their Harris corner value) in the image. This in turn makes the distribution of our candidate 
+             candidates are points that locally dominant (in terms of their Harris corner value) in the image. This in turn makes the distribution of our candidate 
              correspondences more well-distributed throughout the image.
         </p>
 
@@ -419,7 +419,7 @@
         <p>
             The next step after we have identified a good set of candidate correspondences, we need to automate the matching of points between the two images of interest. 
             The first step in doing this is to define a descriptor of each of our features. I did this by first defining an axis-aligned \(40 \times 40\) pixel patch roughly 
-            centered at the point of interest. Then I downsampled this patch to an \(8 \times 8\) pixel patch (with anti-aliasing) and flattened into a \(64\)-D vector. Then 
+            centered at the point of interest. Then I downsampled this patch to an \(8 \times 8\) pixel patch (with anti-aliasing) and flattened it into a \(64\)-D vector. Then 
             this vector was bias/gain normalized so that its elements would have \(\mu = 0\) and \(\sigma = 1\).
         </p>
 
@@ -503,7 +503,7 @@
             <ol>
                 <li>Select 4 random correspondence pairs \((p_1, q_1), (p_2, q_2), (p_3, q_3), (p_4, q_4)\) from the matches found.</li>
                 <li>Compute the homography \(H\) given by these pairs of points such that \(q_i = Hp_i\) </li>
-                <li>Now for all of the potential correspondence pairs, determine ||q_i - Hp_i|| < \(\epsilon\) for some \(\epsilon \in \mathbb{R}\). Classify the pair as an 
+                <li>Now for all of the potential correspondence pairs, determine \(||q_i - Hp_i|| < \epsilon\) for some \(\epsilon \in \mathbb{R}\). Classify the pair as an 
                     inlier if this equality holds true and as an outlier otherwise.</li>
                 <li>Repeat steps 1-3 until you have completed the number of iterations desired.</li>
                 <li>Keep the largest set of inliers</li>
