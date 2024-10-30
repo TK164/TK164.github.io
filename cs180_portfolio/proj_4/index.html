@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CS 180 Project 4A: Image Warping and Mosaicing</title>
+    <title>CS 180 Project 4: (Auto)stitching and Photo Mosaics</title>
     <script id="MathJax-script" async
         src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
     </script>
@@ -62,16 +62,19 @@
 <body>
     <!-- Main Header -->
     <header>
-        <h1>CS 180 Project 4A: Image Warping and Mosaicing</h1>
+        <h1>CS 180 Project 4: (Auto)stitching and Photo Mosaics</h1>
         <h2>Teja Kanthamneni</h2>
     </header>
     
     <section>
+        <h1>Part A: Image Warping and Mosaics</h1>
         <h2>Overview</h2>   
         <p> 
             This project furthers the exploration of image warping through computing homographies between images and blending them to create a mosaic. The resulting 
-            image provides a greater perspective view than the original images. 
+            image provides a greater perspective view than the original images. In this first part of the project, I implement a way to warp and moasic images given 
+            manually defined correpsondences on each image.
         </p>
+
 
         <h2>Capturing Images</h2>   
         <p> 
@@ -109,13 +112,13 @@
                 <td>
                     <figure>
                         <img src=./assets/horizon1.jpg alt="teja_tri_mesh">
-                        <figcaption>Horizon Image 1</figcaption>
+                        <figcaption>Sunset Image 1</figcaption>
                     </figure>
                 </td>
                 <td>
                     <figure>
                         <img src=./assets/horizon2.jpg alt="suchir_tri_mesh">
-                        <figcaption>Horizon Image 2</figcaption>
+                        <figcaption>Sunset Image 2</figcaption>
                     </figure>
                 </td>
                 <td>
@@ -187,13 +190,13 @@
                 <td>
                     <figure>
                         <img src=./assets/corr_horizon_1.jpg alt="teja_tri_mesh">
-                        <figcaption>Horizon Image 1 Correspondences</figcaption>
+                        <figcaption>Sunset Image 1 Correspondences</figcaption>
                     </figure>
                 </td>
                 <td>
                     <figure>
                         <img src=./assets/corr_horizon_2.jpg alt="suchir_tri_mesh">
-                        <figcaption>Horizon Image 2 Correspondences</figcaption>
+                        <figcaption>Sunset Image 2 Correspondences</figcaption>
                     </figure>
                 </td>
                 <td>
@@ -320,7 +323,7 @@
                 <td>
                     <figure>
                         <img src=./assets/horizon_pano.jpg alt="teja_tri_mesh">
-                        <figcaption>Horizon Mosaic</figcaption>
+                        <figcaption>Sunset Mosaic</figcaption>
                     </figure>
                 </td>
                 <td>
@@ -331,6 +334,289 @@
                 </td>
             </tr>
         </table>
+
+
+        <h1>Part B: Feature Matching and Autostitching</h1>
+
+        <h2>Overview</h2>   
+        <p> 
+            In the second part of this project, I automated the selection of identifying potential correspondence features between two images in order to compute a 
+            homography and create our mosaic.
+        </p>
+
+        <h2>Harris Corner Detector</h2>
+        <p>
+            The first step in finding potential correspondence points in our images, is to think about what makes a point a good candidate to be a correspondence. 
+            Intuitively, corners in our images are good candidates due to their prominence and the ease in localizing them. This is one of the easiest ways to manually 
+            select correspondences. To automate the selection of these corners, I used a Harris corner detector. When we look at a point through a small window, 
+            if the point is a corner, when we shift this window in either the \(x\) or \(y\) direction, there should be a significant change in intensity. This results in 
+            the identification of "corners" in our image that we as humans may not think of as corners. However, this is fine as these points are still meet our criteria for 
+            a candidate correspondence. 
+        </p>
+
+        <table>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/glade1_harris_all.png alt="Glade 1 Harris Corners (All)">
+                        <figcaption>Glade 1 - All Harris Corners</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/glade1_harris_250.png alt="Glade 1 Harris Corners (250)">
+                        <figcaption>Glade 1 - 250 Strongest Harris Corners</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <p>
+            Above is the result of running the Harris corner detector on one of my sample images. Notice in the left image, that they are quite a lot of potential 
+            corners. In the right image, I displayed the 250 strongest corners has determined by the Harris corner detector's metric. So it is evident that we will need 
+            to reduce the numbeer of candidate correspondences. However, it does not seem that simply choosing the strongest Harris corners is ideal.
+        </p>
+
+        <h2>Adaptive Non-Maximal Suppression (ANMS)</h2>
+
+        <p>
+            Notice that the strongest corners in our image are very clustered together and if were to try to compute a homography using these points, it could be quite noisy. 
+            Ideally, we have correspondence points that are spread out evenly across the image. To do this, I used a technique known as Adaptive Non-Maximal Suppression (ANMS) 
+            which is described in 
+             <a href="https://ieeexplore.ieee.org/document/1467310"><i>Multi-Image Matching using Multi-Scale Oriented Patches</i></a>. 
+
+             For each candidate point \(x_i\) we define its suppression radius:
+             $$r_i = \min_j |x_i - x_j|, s.t. f(x_i) < c_{robust}f(x_j), x_j \in \mathcal{I}$$
+
+             where \(\mathcal{I}\) is the set of all candidate points. For this project I used \(c_{robust} = 0.9\) as suggested in the paper. Then we sort these points in 
+             order of decreasing \(r_i\) to determine the best candidate points for computing a homography. Intuitively, what we're defining as the best correspondence 
+             candidates as points that locally dominant (in terms of their Harris corner value) in the image. This in turn makes the distribution of our candidate 
+             correspondences more well-distributed throughout the image.
+        </p>
+
+        <p>
+            Below is a comparison of the 250 best candidate points as defined by using the Harris corner strength versus using ANMS:
+        </p>
+
+        <table>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/glade1_harris_250_b.png alt="Glade 1 - 250 Strongest Harris Corners">
+                        <figcaption>Glade 1 - 250 Strongest Harris Corners</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/glade1_anms_250.png alt="Glade 1 - 250 Strongest ANMS Corners">
+                        <figcaption>Glade 1 - 250 Best ANMS Corners</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Feature Descriptor Extraction</h2>
+        <p>
+            The next step after we have identified a good set of candidate correspondences, we need to automate the matching of points between the two images of interest. 
+            The first step in doing this is to define a descriptor of each of our features. I did this by first defining an axis-aligned \(40 \times 40\) pixel patch roughly 
+            centered at the point of interest. Then I downsampled this patch to an \(8 \times 8\) pixel patch (with anti-aliasing) and flattened into a \(64\)-D vector. Then 
+            this vector was bias/gain normalized so that its elements would have \(\mu = 0\) and \(\sigma = 1\).
+        </p>
+
+        <p>
+            Below is a sample feature vector, reshaped to be \(8 \times 8\) pixels and its corresponding point on the glade image:
+        </p>
+
+        <table>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/feat_vec.png style="max-width: 400px; height: auto;" alt="Sample Feature Vector">
+                        <figcaption>Reshaped Sample Feature Vector</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/feat_vec_corr.png style="max-width: 400px; height: auto;" alt="Feature Vector's Corresponding Point">
+                        <figcaption>Feature Vector's Corresponding Point</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Feature Matching</h2>
+        <p>
+            After we have defined a feature vector for each of our candidate correspondences, we can begin finding the matches. In order to do this, I first computed the 
+            distance between each candidate point's feature vector in one image to the feature vectors every candidate point in the other image. I then determine each point's 
+            nearest neighbor in the other image, creating a distance matrix. As a sanity check, I ensure symmetry of each point's nearest neighbor (i.e. if \(x_{2j}\) is the nearest 
+            neighbor of \(x_{1i}\), then \(x_{1i}\) should also be the nearest neighbor of \(x_{2j}\)).
+        </p>
+        <p>
+            However, instead of simply thresholding on the distance between a point and its nearest neighbor, we threshold the ratio of the distances betweeen a point's 
+            nearest neighbor and second nearest neighbor. This is known as Lowe's trick, Intuitively, if the nearest neighbor is a correct match to our point, then its feature 
+            vector must be much closer to that of our point, than the the second nearest neighbor's feature vector.
+        </p>
+        <p>
+            Below are subset of the points that were matched for the image pairs used to make mosaics in part A:
+        </p>
+
+        <table>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/glade_matched_feats.png style="max-width: 1000px; height: auto;" alt="Glade - 45 Sample Correspondence Matches">
+                        <figcaption>Glade - 45 Sample Correspondence Matches</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/doe_matched_feats.png style="max-width: 1000px; height: auto;" alt="Campanile - 20 Sample Correspondence Matches">
+                        <figcaption>Campanile - 20 Sample Correspondence Matches</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/horizon_matched_feats.png style="max-width: 1000px; height: auto;" alt="Sunset - 20 Sample Correspondence Matches">
+                        <figcaption>Sunset - 20 Sample Correspondence Matches</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/foothill_matched_feats.png style="max-width: 1000px; height: auto;" alt="Foothill - 20 Sample Correspondence Matches">
+                        <figcaption>Foothill - 20 Sample Correspondence Matches</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>RANSAC</h2>
+        <p>
+            Despite our previous efforts to reject outliers, a few will still make it into our set of correspondences. It is important to not use these outliers because 
+            the Least Squares we use in our homography computation is sensitive to outliers and can significantly ruin the warping of our images. In order to mitigate this, 
+            I implemented the Random Sample Consensus (RANSAC) alogrithm to determine the points that should be used for computing the homography.
+        </p>
+
+        <p>
+            The RANSAC algorithm used followed the following steps:
+            <ol>
+                <li>Select 4 random correspondence pairs \((p_1, q_1), (p_2, q_2), (p_3, q_3), (p_4, q_4)\) from the matches found.</li>
+                <li>Compute the homography \(H\) given by these pairs of points such that \(q_i = Hp_i\) </li>
+                <li>Now for all of the potential correspondence pairs, determine ||q_i - Hp_i|| < \(\epsilon\) for some \(\epsilon \in \mathbb{R}\). Classify the pair as an 
+                    inlier if this equality holds true and as an outlier otherwise.</li>
+                <li>Repeat steps 1-3 until you have completed the number of iterations desired.</li>
+                <li>Keep the largest set of inliers</li>
+                <li>Re-compute the Least Squares estimate for \(H\) for all the inliers.</li>
+              </ol>
+        </p>
+
+        <p>For this project I had RANSAC perform 10000 iterations and used \(\epsilon = 4\)</p>
+
+        <p>Below are displays of the a maxium set of inliers when RANSAC was peformed on the images:</p>
+
+        <table>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/inliers_glade.png style="max-width: 1000px; height: auto;" alt="Glade - Max Set of Inliers">
+                        <figcaption>Glade - Max Set of Inliers</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/inliers_doe.png style="max-width: 1000px; height: auto;" alt="Campanile - Max Set of Inliers">
+                        <figcaption>Campanile - Max Set of Inliers</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/inliers_horizon.png style="max-width: 1000px; height: auto;" alt="Sunset - Max Set of Inliers">
+                        <figcaption>Sunset - Max Set of Inliers</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/4b/inliers_foothill.png style="max-width: 1000px; height: auto;" alt="Foothill - Max Set of Inliers">
+                        <figcaption>Foothill - Max Set of Inliers</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Results</h2>
+       <p>
+        After computing the homography \(H\), I used the same process as described in part A to create the mosaics. Below are the moasics created from the manual correspondence 
+        selection and the automatic correspondence selection. As we can see, the automation of the feature selection does create mosaics that are just as good if not better than 
+        the mosaics created by the manually selecting correspondences. 
+       </p>
+
+       <table>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/glade_pano.jpg alt="teja_tri_mesh">
+                    <figcaption>Manual Glade Mosaic</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/4b/pano_glade.png alt="teja_tri_mesh">
+                    <figcaption>Autostitched Glade Mosaic</figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/doe_pano.jpg alt="teja_tri_mesh">
+                    <figcaption>Manual Doe Mosaic</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/4b/pano_doe.png alt="teja_tri_mesh">
+                    <figcaption>Autostitched Doe Mosaic</figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/horizon_pano.jpg alt="teja_tri_mesh">
+                    <figcaption>Manual Sunset Mosaic</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/4b/pano_horizon.png alt="teja_tri_mesh">
+                    <figcaption>Autostitched Sunset Mosaic</figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/foothill_pano.jpg alt="teja_tri_mesh">
+                    <figcaption>Manual Foothill Mosaic</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/4b/pano_foothill.png alt="teja_tri_mesh">
+                    <figcaption>Autostitched Foothill Mosaic</figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <h2>Reflections</h2>
+    <p>
+        I learned a lot from this project. I would say the most significant thing I learned was how to autodetect features in images and matching them together. The 
+        techniques and algorithms we used are things that were very unfamiliar to me to it was very cool to learn and implement them!
+    </p>
 
 </body>
 </html>
