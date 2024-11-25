@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CS 180 Project 5: Fun with Diffusion Models!</title>
+    <script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: antiquewhite;
+        }
+
+        header {
+            background-color: #6dc070;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        section {
+            padding: 20px;
+        }
+
+        img {
+            width: 100%;
+            max-width: 350px;
+            height: auto;
+            display: block;
+            margin: 0 auto 20px;
+        }
+
+        /* Styling for the table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table, th, td {
+            border: 1px solid antiquewhite;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border: none;
+        }
+
+        td img {
+            max-width: 400px;
+            height: auto;
+        }
+        figure {
+            text-align: center; 
+            margin: 0 auto; 
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Main Header -->
+    <header>
+        <h1>CS 180 Project 5: Fun with Diffusion Models!</h1>
+        <h2>Teja Kanthamneni</h2>
+    </header>
+    
+    <section>
+        <h1>Part A: The Power of Diffusion Models!</h1>
+        <h2>Overview</h2>   
+        <p> 
+            In this part of the project, I play around with the pre-trained DeepFloyd IF diffusion model, which was obtained from Hugging Face. I worked 
+            on implementing diffusion sampling loops and use that along with computed text embeddings for tasks such as inpainting, creating anagrams, 
+            and creating hybrid images.
+        </p>
+
+        <h2>Sampling from the Model</h2>   
+        <p> 
+            Below are some samples from the model using various prompts and number of inference steps and upsampled from 64 x 64 to 256 x 256 using a 
+            random seed of 1142024. The text prompts used for these were "an oil painting of a snowy mountain village", "a man wearing a hat", and "a 
+            rocket ship".
+        </p> 
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/0/snowy_mountain_10.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Snowy Mountain: Inference Steps = 10</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/0/hat_man_10.png style="max-width: 300px; height: auto;" alt="suchir_tri_mesh">
+                        <figcaption>Man Wearing a Hat: Inference Steps = 10</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/0/rocket_ship_10.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Rocket Ship: Inference Steps = 10</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/0/snowy_mountain_big.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Snowy Mountain: Inference Steps = 20</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/0/hat_man_big.png style="max-width: 300px; height: auto;" alt="suchir_tri_mesh">
+                        <figcaption>Man Wearing a Hat: Inference Steps = 20</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/0/rocket_ship_big.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Rocket Ship: Inference Steps = 20</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/0/snowy_mountain_40.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Snowy Mountain: Inference Steps = 40</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/0/hat_man_40.png style="max-width: 300px; height: auto;" alt="suchir_tri_mesh">
+                        <figcaption>Man Wearing a Hat: Inference Steps = 40</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/0/rocket_ship_40.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Rocket Ship: Inference Steps = 40</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <p>
+            As we can see above, the number of the quality of the output image is postively correlated with the inference steps used in the sampling. There 
+            was siginificant improvement for all three images from 10 to 20 inference steps. The most improvement was seen in the image of the man wearing a 
+            hat from 20 to 40 inference steps.
+        </p>
+        
+        <h2>Implementing the Forward Process</h2>
+        
+        <p>
+            The first part of implmenting the sampling loop is implementing the forward noising process. Given a clean image \(x_0\), we add noise to the 
+            image in the following way:
+
+            $$q(x_t|x_0) = \mathcal{N}(x_t; \sqrt{\bar{\alpha}}x_0, (1 - \bar{\alpha_t})\mathbf{I})$$
+
+            which is equivalent to,
+
+            $$x_t = \sqrt{\bar{\alpha}}x_0 + \sqrt{1 - \bar{\alpha}\epsilon}, \epsilon ~ \mathcal{N}(0, 1)$$
+
+            Each of \(\bar{\alpha}\) is provide from the model. Here are some examples of the foward process being applied to an imagine of the Campanile 
+            on Berkeley campus: 
+        </p>
+        
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.1/campanile.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Clean Image: t = 0</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.1/campanile_250.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Noise: t = 250</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.1/campanile_500.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Noise t = 500</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.1/campanile_750.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Noise t = 750</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Classical Denoising</h2>
+        <p>
+            Below I attempt a naive method of denoising which involves passing applying a Gaussian filter on each noisy image. This evidently is not a great 
+            solution and its effectiveness decreases as the amount of noise applied increases.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.2/gauss_250.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Gaussian Blur Denoising: t = 250</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.2/gauss_250.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Gaussian Blur Denoising: t = 500</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.2/gauss_250.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Gaussian Blur Denoising: t = 750</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>One Step Denoising</h2>
+        <p>
+            We can more effictively denoise our images by passing them and a time step t through our trained UNet, which can recover Gaussian noise from 
+            our image. We can then remove this predicted noise from the image and get something close to our original image. The text prompt used for 
+            this denoising was "a high quality photo". Below are the outputs of doing this:
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.3/unet_250.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>One Step Denoising: t = 250</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.3/unet_500.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>One Step Denoising: t = 500</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.3/unet_750.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>One Step Denoising: t = 750</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <p>
+            We can see that as t gets larger, our one step denoising results in an image that looks roughly good, but furhter away from the orignal 
+            image of the Campanile.
+        </p>
+
+        <h2>Iterative Denoising</h2>
+
+        <p>
+            Since one step denosing performs worse as the amount of noise in the image increases, we can try iteratively denoising our image starting at 
+            timestep \(T = 1000\). Since taking individual steps until we reach \(t = 0\) would be very expensive, we taking steps with a stride of 30. 
+            For a timestep \(t' \lt t\), we denoised image in the following manner:
+
+            $$x_{t'} = \frac{\sqrt{\bar{\alpha_{t'}}}\beta_t}{1 - \bar{\alpha_t}}x_0 + \frac{\sqrt{\alpha_t}(1 - \bar{\alpha_{t'}})}{1 - \bar{\alpha_t}} x_t + v_{\sigma} $$
+
+            where, \(\bar{\alpha_t}\) is defined by the model, \(\frac{\bar{\alpha_t}}{\bar{\alpha_{t'}}}\), \(\beta_t = 1 - \alpha_t\), and \(v_{\sigma}\)
+             is random noise predicted by the model.
+
+             Below are images as the appear throughout the denoising process as well as the final product compared to the one step denoising, the gaussian blurring, 
+             and the original image.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.4/t_690.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Iterative Denoising: t = 690</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.4/t_540.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Iterative Denoising: t = 540</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.4/t_390.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Iterative Denoising: t = 390</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.4/t_240.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Iterative Denoising: t = 240</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.4/t_90.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Iterative Denoising: t = 90</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.1/campanile.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.4/t_0.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Iterative Denoising: t = 0</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.4/clean_one_step.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>One Step Denoising</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.4/gauss_blur.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Gaussian Blurring</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Diffusion Model Sampling</h2>
+        <p>
+            We can also use this iterative denoising process to create images from scratch. We do this by starting out with an image of pure noise 
+            and and iteratively denoising from there. The prompt used here was "a high quality photo".
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.5/im1.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Image 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.5/im2.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Image 2</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.5/im3.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Image 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.5/im4.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Image 4</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.5/im5.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Image 5</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Classifier-Free Guidance</h2>
+
+        <p>
+            As we can see above, the images produced are not very good. We can remedy this with a technique known as classifier-free guidance (CFG), in 
+            which we predict a conditional and unconditional noise estimate, denoted \(\epsilon_c\) and \(\epsilon_u\) respectively. Then we compute our 
+            new noise estimate: \(\epsilon = \epsilon_u + \gamma(\epsilon_c - \epsilon_u)\), where \(\gamma \gt 1\). For the below sampled images, \(\gamma = 7\),
+             the text prompt for conditional guidance is "a high quality photo", and the text prompt for the unconditional guidance is "".
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.6/im1.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Image 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.6/im2.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Image 2</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.6/im3.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Image 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.6/im4.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Image 4</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.6/im5.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Image 5</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Image-to-Image Translation</h2>
+
+        <p>
+            Now using CFG, we can do image-to-image translation, where we start off by adding some noise to our image, and iteratively force it back onto 
+            the manifold of natural images. I did this on various images, starting from various noise levels \(i\), where \(i\) is the number of strided 
+            time steps away we are away from our clean image at timestep \(t = 0\). The effect we will see is that when \(i\) starts off low, the result 
+            will be far from the original image, but as \(i\) increases, the result get closer and closer to the original. Through this process we can 
+            see some pretty interesting images.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/camp_1.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Campanile: Noise Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/camp_3.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Campanile: Noise Level 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/camp_5.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Campanile: Noise Level 5</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/camp_7.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Campanile: Noise Level 7</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/camp_10.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Campanile: Noise Level 10</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/camp_20.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Campanile: Noise Level 20</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.1/campanile.png style="max-width: 250px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Original Campanile</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/lands_end_1.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Land's End: Noise Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/lands_end_3.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Land's End: Noise Level 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/lands_end_5.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Land's End: Noise Level 5</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/lands_end_7.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Land's End: Noise Level 7</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/lands_end_10.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Land's End: Noise Level 10</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/lands_end_20.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Land's End: Noise Level 20</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/lands_end.png style="max-width: 250px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Land's End, San Francisco, CA</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/bagel_toilet_1.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Bagel Toilet: Noise Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/bagel_toilet_3.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Bagel Toilet: Noise Level 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/bagel_toilet_5.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Bagel Toilet: Noise Level 5</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/bagel_toilet_7.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Bagel Toilet: Noise Level 7</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/bagel_toilet_10.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Bagel Toilet: Noise Level 10</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/bagel_toilet_20.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Bagel Toilet: Noise Level 20</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7/bagel_toilet.png style="max-width: 250px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Bagel Toilet from The Laundromat SF, CA </figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Editing Web Images and Hand Drawn Images</h2>
+
+        <p>
+            The above process can also be performed on non-realistic or hand drawn images, which produces cool intermediate images as the model attempts 
+            to force the image onto the manifold of natural images.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/turtwig_1.png alt="teja_tri_mesh">
+                        <figcaption>Turtwig: Noise Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/turtwig_3.png alt="teja_tri_mesh">
+                        <figcaption>Turtwig: Noise Level 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/turtwig_5.png alt="teja_tri_mesh">
+                        <figcaption>Turtwig: Noise Level 5</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/turtwig_7.png alt="teja_tri_mesh">
+                        <figcaption>Turtwig: Noise Level 7</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/turtwig_10.png alt="teja_tri_mesh">
+                        <figcaption>Turtwig: Noise Level 10</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/turtwig_12.png alt="teja_tri_mesh">
+                        <figcaption>Turtwig: Noise Level 12</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/turtwig_15.png alt="teja_tri_mesh">
+                        <figcaption>Turtwig: Noise Level 15</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/turtwig_18.png alt="teja_tri_mesh">
+                        <figcaption>Turtwig: Noise Level 18</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/turtwig_20.png alt="teja_tri_mesh">
+                        <figcaption>Turtwig: Noise Level 20</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/turtwig.png alt="teja_tri_mesh">
+                        <figcaption>Original Turtwig</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/city_1.png alt="teja_tri_mesh">
+                        <figcaption>Hand Drawn City: Noise Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/city_3.png alt="teja_tri_mesh">
+                        <figcaption>Hand Drawn City: Noise Level 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/city_5.png alt="teja_tri_mesh">
+                        <figcaption>Hand Drawn City: Noise Level 5</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/city_7.png alt="teja_tri_mesh">
+                        <figcaption>Hand Drawn City: Noise Level 7</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/city_10.png alt="teja_tri_mesh">
+                        <figcaption>Hand Drawn City: Noise Level 10</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/city_12.png alt="teja_tri_mesh">
+                        <figcaption>Hand Drawn City: Noise Level 12</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/city_15.png alt="teja_tri_mesh">
+                        <figcaption>Hand Drawn City: Noise Level 15</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/city_18.png alt="teja_tri_mesh">
+                        <figcaption>Hand Drawn City: Noise Level 18</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/city_20.png alt="teja_tri_mesh">
+                        <figcaption>Hand Drawn City: Noise Level 20</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/city.png alt="teja_tri_mesh">
+                        <figcaption>Original Hand Drawn City</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/wanted_1.png alt="teja_tri_mesh">
+                        <figcaption>Goblin Wanted Poster: Noise Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/wanted_3.png alt="teja_tri_mesh">
+                        <figcaption>Goblin Wanted Poster: Noise Level 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/wanted_5.png alt="teja_tri_mesh">
+                        <figcaption>Goblin Wanted Poster: Noise Level 5</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/wanted_7.png alt="teja_tri_mesh">
+                        <figcaption>Goblin Wanted Poster: Noise Level 7</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/wanted_10.png alt="teja_tri_mesh">
+                        <figcaption>Goblin Wanted Poster: Noise Level 10</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/wanted_12.png alt="teja_tri_mesh">
+                        <figcaption>Goblin Wanted Poster: Noise Level 12</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/wanted_15.png alt="teja_tri_mesh">
+                        <figcaption>Goblin Wanted Poster: Noise Level 15</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/wanted_18.png alt="teja_tri_mesh">
+                        <figcaption>Goblin Wanted Poster: Noise Level 18</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/wanted_20.png alt="teja_tri_mesh">
+                        <figcaption>Goblin Wanted Poster: Noise Level 20</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.1/wanted.png alt="teja_tri_mesh">
+                        <figcaption>Original Hand Drawn Goblin Wanted Poster</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>  
+
+        <h2>Inpainting</h2>
+
+        <p>
+            We can also use this technique to do inpainting. We define a region of our image that we want to regenerate via a binary mask. Then we go 
+            through the deniosing process, but as the last step of every iteration, we force \(x_t\) to have the same pixels as the original image noised 
+            at the current value outside 
+            of the designated mask. Formally,
+
+            $$x_{t} = \mathbf{mask} * x_t + (1 - \mathbf{mask}) * forward(x_{original}, t)$$
+
+            Below are some images that this was performed on:
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/camp.png alt="teja_tri_mesh">
+                        <figcaption>Campanile</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/camp_mask.png alt="teja_tri_mesh">
+                        <figcaption>Mask</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/camp_to_replace.png alt="teja_tri_mesh">
+                        <figcaption>Hole to Fill</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/camp_1.png alt="teja_tri_mesh">
+                        <figcaption>Result 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/camp_5.png alt="teja_tri_mesh">
+                        <figcaption>Result 2</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/camp_10.png alt="teja_tri_mesh">
+                        <figcaption>Result 3</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/teja.png alt="teja_tri_mesh">
+                        <figcaption>Teja</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/teja_mask.png alt="teja_tri_mesh">
+                        <figcaption>Mask</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/teja_to_replace.png alt="teja_tri_mesh">
+                        <figcaption>Hole to Fill</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/teja_5.png alt="teja_tri_mesh">
+                        <figcaption>Result 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/teja_7.png alt="teja_tri_mesh">
+                        <figcaption>Result 2</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/teja_10.png alt="teja_tri_mesh">
+                        <figcaption>Result 3</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/car.png alt="teja_tri_mesh">
+                        <figcaption>Car</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/car_mask.png alt="teja_tri_mesh">
+                        <figcaption>Mask</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/car_to_replace.png alt="teja_tri_mesh">
+                        <figcaption>Hole to Fill</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/car_3.png alt="teja_tri_mesh">
+                        <figcaption>Result 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/car_7.png alt="teja_tri_mesh">
+                        <figcaption>Result 2</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/car_10.png alt="teja_tri_mesh">
+                        <figcaption>Result 3</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table> 
+
+        <h2>Text Conditional Image-to-Image Translation</h2>
+
+        <p2>
+            I can also do what I did previously for image-to-image translation but now condition it on a text prompt. Then when the noise level is low the 
+            resultant image will look close to the text prompt, and as it increases, the image will start to look more like the original image. Here are some 
+            samples I created using this method:
+        </p2>
+        
+        
+        <table class="center">
+            <tr>
+                <td><b>Prompt: "a rocket ship"</b></td> 
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/rocket_camp_1.png alt="teja_tri_mesh">
+                        <figcaption>Rocket to Campanile: Noise Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/rocket_camp_3.png alt="teja_tri_mesh">
+                        <figcaption>Rocket to Campanile: Noise Level 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/rocket_camp_5.png alt="teja_tri_mesh">
+                        <figcaption>Rocket to Campanile: Noise Level 5</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/rocket_camp_7.png alt="teja_tri_mesh">
+                        <figcaption>Rocket to Campanile: Noise Level 7</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/rocket_camp_10.png alt="teja_tri_mesh">
+                        <figcaption>Rocket to Campanile: Noise Level 10</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/rocket_camp_20.png alt="teja_tri_mesh">
+                        <figcaption>Rocket to Campanile: Noise Level 20</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.2/camp.png style="min-width: 220px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Campanile</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+        </table>
+        <table>
+                <td><b>Prompt: "a photo of a man"</b></td> 
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/man_moon_1.png alt="teja_tri_mesh">
+                        <figcaption>Man to Moon: Noise Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/man_moon_3.png alt="teja_tri_mesh">
+                        <figcaption>Man to Moon: Noise Level 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/man_moon_5.png alt="teja_tri_mesh">
+                        <figcaption>Man to Moon: Noise Level 5</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/man_moon_7.png alt="teja_tri_mesh">
+                        <figcaption>Man to Moon: Noise Level 7</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/man_moon_10.png alt="teja_tri_mesh">
+                        <figcaption>Man to Moon: Noise Level 10</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/man_moon_12.png alt="teja_tri_mesh">
+                        <figcaption>Man to Moon: Noise Level 12</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/man_moon_20.png alt="teja_tri_mesh">
+                        <figcaption>Man to Moon: Noise Level 20</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/moon.png style="min-width: 190px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Moon</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+        <table>
+            <tr>
+                <td><b>Prompt: "a photo of a dog"</b></td> 
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/robo_dog_1.png alt="teja_tri_mesh">
+                        <figcaption>Dog to Robot Dog: Noise Level 1</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/robo_dog_3.png alt="teja_tri_mesh">
+                        <figcaption>Dog to Robot Dog: Noise Level 3</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/robo_dog_5.png alt="teja_tri_mesh">
+                        <figcaption>Dog to Robot Dog: Noise Level 5</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/robo_dog_7.png alt="teja_tri_mesh">
+                        <figcaption>Dog to Robot Dog: Noise Level 7</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/robo_dog_10.png alt="teja_tri_mesh">
+                        <figcaption>Dog to Robot Dog: Noise Level 10</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/robo_dog_12.png alt="teja_tri_mesh">
+                        <figcaption>Dog to Robot Dog: Noise Level 12</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/robo_dog_17.png alt="teja_tri_mesh">
+                        <figcaption>Dog to Robot Dog: Noise Level 17</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/robo_dog_20.png alt="teja_tri_mesh">
+                        <figcaption>Dog to Robot Dog: Noise Level 20</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/pt_a/1.7.3/quadraped.png style="min-width: 168px; height: auto;" alt="teja_tri_mesh">
+                        <figcaption>Robot Dog</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table> 
+
+    <h2>Visual Anagrams</h2>
+    <p>
+        We can also use CFG to create optical illusions. In this section, I show anagrams that I created. To do this we can predict the noise for two 
+        separate text prompts and average them together for each iteration. For both the conditional noise, unconditional noise, and predicted variance, 
+        values were predicted with 
+        one prompt on our image normally, and then the image is rotated \(180^{\circ}\) and then values are predicted with this flipped image and the 
+        other prompt, which are flipped before averaging. Below are some of the anagrams that were created. I also passed the results through an upsampler 
+        provided in the downloaded model.
+    </p>
+
+    <table class="center">
+        <tr>
+            <td width=150px; style="word-wrap: break-word;">
+                <b>Prompts: "an oil painting of an old man" + " an oil painting of people around a campfire"</b>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.8/old_man_campfire.png style="min-width: 150px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Original</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.8/old_man_campfire_flip.png style="min-width: 150px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Original Flipped</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.8/old_man_campfire_big.png alt="teja_tri_mesh">
+                    <figcaption>Upsampled</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.8/old_man_campfire_big_flip.png alt="teja_tri_mesh">
+                    <figcaption>Upsampled Flipped</figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td width=150px; style="word-wrap: break-word;">
+                <b>Prompts: "an oil painting of a snowy mountain village" + "a photo of the amalfi coast"</b>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.8/snow_mt_coast.png style="min-width: 150px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Original</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.8/snow_mt_coast_flip.png style="min-width: 150px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Original Flipped</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.8/snow_mt_coast_big.png alt="teja_tri_mesh">
+                    <figcaption>Upsampled</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.8/snow_mt_coast_big_flip.png alt="teja_tri_mesh">
+                    <figcaption>Upsampled Flipped</figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td width=150px; style="word-wrap: break-word;">
+                <b>Prompts: "a photo of a man" + "a photo of a dog"</b>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.8/man_dog.png style="min-width: 150px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Original</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.8/man_dog_flip.png style="min-width: 150px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Original Flipped</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.8/man_dog_big.png alt="teja_tri_mesh">
+                    <figcaption>Upsampled</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.8/man_dog_big_flip.png alt="teja_tri_mesh">
+                    <figcaption>Upsampled Flipped</figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <h2>Hybrid Images</h2>
+
+    <p>
+        In a similar way to making anagrams, we can make hybrid images. We still predict the noise of two different prompts, but we initially pass the 
+        original image into the model twice, and then apply a low pass filter onto one set predicted noises and variacne and a high pass filter onto the other  
+        set of predicted noises and variances. Through this process, we get a hybrid image that looks like one thing from afar where low frequencies are 
+        dominant, and another thing up close, where high frequencies are dominant. Below are some samples that I created as well as the upsampled version:
+    </p>
+
+    <table class="center">
+        <tr>
+            <td width=150px; style="word-wrap: break-word;">
+                <b>Prompts: "a lithograph of a skull" + "a lithograph of waterfalls"</b>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.9/skull_waterfall.png style="max-width: 150px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Original Small</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.9/skull_waterfall_big.png style="max-width: 150px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Original Big</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.9/skull_waterfall.png style="min-width: 300px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Upsampled Small</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.9/skull_waterfall_big.png style="min-width: 300px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Upsampled Big</figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td width=150px; style="word-wrap: break-word;">
+                <b>Prompts: "a lithograph of a turtle" + "a lithograph of flowers"</b>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.9/flower_turtle.png style="max-width: 150px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Original Small</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.9/flower_turtle_big.png style="max-width: 150px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Original Big</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.9/flower_turtle.png style="min-width: 300px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Upsampled Small</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.9/flower_turtle_big.png style="min-width: 300px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Upsampled Big</figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td width=150px; style="word-wrap: break-word;">
+                <b>Prompts: "a lithograph of a trees" + "a lithograph of a peacock"</b>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.9/peacock_tree.png style="max-width: 100px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Original Small</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.9/peacock_tree_big.png style="max-width: 100px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Original Big</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.9/peacock_tree.png style="min-width: 300px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Upsampled Small</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_a/1.9/peacock_tree_big.png style="min-width: 300px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption>Upsampled Big</figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+
+    <h1>Part B: Diffusion Models from Scratch!</h1>
+    <h2>Overview</h2>   
+    <p> 
+        In this part of the project, I work on creating a diffusion model from scratch and implement in on the MNIST dataset of hand written numbers.
+    </p>
+
+    <h2>Training a Single-Step Denoising UNet</h2>
+    <p>
+        To do this I first implemented a UNet that will act as a simple one-step denoiser. The goal is that when Given a noisy image \(z\), 
+        the denoiser \(D_{\theta}\) will map \(z\) to the clean image \(x\). Here we optimize over an L2 loss:
+
+        $$L = \mathbb{E}_{z,x}||D_{\theta}(z) - x||^2 $$
+
+        Below is a schematic of the implemented UNet:
+    </p>
+    
+    <figure>
+        <img src=./assets/pt_b/unet_diagram_1.png style="max-width: 1000px; height: auto;" alt="UNet_diagram">
+        <figcaption>Unconditional UNet Schematic</figcaption>
+    </figure>
+
+    <p>The above diagram uses some standard tensor operations which defined as following:</p>
+    <figure>
+        <img src=./assets/pt_b/unet_ops.png style="max-width: 800px; height: auto;" alt="UNet_diagram">
+        <figcaption>Standard UNet Operations</figcaption>
+    </figure>
+
+    <p> where, </p>
+    <p><b>Conv2d(kernel_size, stride, padding)</b> is torch.nn.Conv2d() </p>
+    <p><b>BN</b> is torch.nn.BatchNorm2d()</p>
+    <p><b>GELU</b> is torch.nn.GELU() </p>
+    <p><b>ConvTranspose2d(kernel_size, stride, padding)</b> is torch.nn.ConvTranspose2d()</p>
+    <p><b>AvgPool(kernel_size)</b> is torch.nn.AvgPool2d()</p>
+    <p><b>D</b> is the number of hidden channels and is a hyperparameter</p>
+
+    <p>
+        I implemented this model and then trained it on a modified version of the MNIST dataset where noise was injected into each image. For each clean 
+        image \(x\), a noisy image \(z\) was created in the following manner:
+
+        $$z = x + \sigma\epsilon, \epsilon ~ \mathcal{N}(0, I)$$
+
+        Below is a visualization of several images in the MNIST dataset with various levels of noise added, which is controlled by \(\sigma\):
+    </p>
+
+    <table class="center">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2/nums_0.0.png alt="teja_tri_mesh">
+                    <figcaption><b>\(\sigma = 0.0\)</b></figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2/nums_0.2.png alt="teja_tri_mesh">
+                    <figcaption><b>\(\sigma = 0.2\)</b></figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2/nums_0.4.png alt="teja_tri_mesh">
+                    <figcaption><b>\(\sigma = 0.4\)</b></figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2/nums_0.5.png alt="teja_tri_mesh">
+                    <figcaption><b>\(\sigma = 0.5\)</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <table>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2/nums_0.6.png alt="teja_tri_mesh">
+                    <figcaption><b>\(\sigma = 0.6\)</b></figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2/nums_0.8.png alt="teja_tri_mesh">
+                    <figcaption><b>\(\sigma = 0.8\)</b></figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2/nums_1.0.png alt="teja_tri_mesh">
+                    <figcaption><b>\(\sigma = 1.0\)</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <p>The following loss plot shows the progression of the model as it was trained for 5 epochs. Note that the y-axis has a logarithmic scale.</p>
+
+    <figure>
+        <img src=./assets/pt_b/1.2.1/loss_plot.png style="max-width: 500px; height: auto;" alt="UNet_diagram">
+    </figure>
+
+    <h3>In-Distribution Testing</h3>
+    <p>
+        As the model was training, I saved the weights after the first and fifth epochs and used them to test the denoising capabilites of my model 
+        at each of these points. I first tried them on in-distribution images in which \(\sigma = 0.5\). Here are the results:
+    </p>
+
+    <table>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/in_dist_og.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Original Clean Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/in_dist_noisy.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Noisy Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/in_dist_ep1.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 1 Denoised Images: \(\sigma = 0.5\)</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/in_dist_ep5.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 5 Denoised Images: \(\sigma = 0.5\)</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <h3>Out-of-Distribution Testing</h3>
+    <p>
+        Additionally I tested this model's efficacy for images outside of its trianing distribution with noise levels that varied from \(\sigma = 0.5\).
+        In total I tried it with \(\sigma \in [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]\). As we might expect, the model is able to perform decent denoising 
+        on images that have \(\sigma \lt 0.5\) but struggles more with images that have \(\sigma \gt 0.5\) Here are the results at epochs 1 and 5:
+    </p>
+    
+    <table style="border: 1px solid rgb(123, 123, 123)">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.0.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Noisy Images: \(\sigma = 0.0\)</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.0_ep1.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 1 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.0_ep5.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 5 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+    <table style="border: 1px solid rgb(123, 123, 123)">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.2.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Noisy Images: \(\sigma = 0.2\)</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.2_ep1.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 1 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.2_ep5.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 5 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+    <table style="border: 1px solid rgb(123, 123, 123)">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.4.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Noisy Images: \(\sigma = 0.4\)</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.4_ep1.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 1 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.4_ep5.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 5 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+    <table style="border: 1px solid rgb(123, 123, 123)">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.5.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Noisy Images: \(\sigma = 0.5\)</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.5_ep1.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 1 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.5_ep5.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 5 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+    <table style="border: 1px solid rgb(123, 123, 123)">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.6.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Noisy Images: \(\sigma = 0.6\)</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.6_ep1.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 1 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.6_ep5.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 5 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+    <table style="border: 1px solid rgb(123, 123, 123)">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.8.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Noisy Images: \(\sigma = 0.8\)</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.8_ep1.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 1 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_0.8_ep5.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 5 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+    <table style="border: 1px solid rgb(123, 123, 123)">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_1.0.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Noisy Images: \(\sigma = 1.0\)</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_1.0_ep1.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 1 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/1.2.1/noise_1.0_ep5.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                    <figcaption><b>Epoch 5 Denoised Images</b></figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <h2>Time-Conditioned UNet</h2>
+    <p>
+        In order to do iterative denoising, we need to condition our UNet on our timesteps. We do this by adding fully connected layers to the UNet in 
+        the following manner:
+    </p>
+
+    <figure>
+        <img src=./assets/pt_b/tc_unet.png style="max-width: 1000px; height: auto;" alt="UNet_diagram">
+    </figure>
+
+    <p>The FC block is defined in the following manner:</p>
+
+    <figure>
+        <img src=./assets/pt_b/fc_block.png style="max-width: 500px; height: auto;" alt="UNet_diagram">
+    </figure>
+
+    <p>where <b>Linear(F_in, F_out)</b> is implemented via torch.nn.Linear().</p>
+
+    <p>Additionally we do the following:</p>
+    <p>Define a list of \(\beta\)'s starting at \(\beta_0 = 0.0001\) and ends at \(\beta_T = \beta_{300} = 0.2\) with an even spacing of values in between.</p>
+    <p>(\alpha_t = 1 - \beta_t\)</p>
+    <p>\(\bar{\alpha_t} = \prod_{s=1}^{t} \alpha_{t}\)</p>
+
+    <p>
+        Additionally, we now optimize over an L2 loss of the noise as opposed to the image pixel values. Note that these are mathematically equivalent.
+
+        $$L = \mathbb{E}_{\epsilon, x_0, t}||\epsilon_{\theta}(x_t, t) - \epsilon||^2$$
+    </p>
+
+    <p>The model was trained according to the following algorithm:</p>
+
+    <figure>
+        <img src=./assets/pt_b/tc_train.png style="max-width: 700px; height: auto;" alt="UNet_diagram">
+    </figure>
+
+
+    <p>This time-conditioned UNet was trained for 20 epochs and the training loss graph looked like the following:</p>
+
+    <figure>
+        <img src=./assets/pt_b/2.3/loss_plot.png style="max-width: 500px; height: auto;" alt="UNet_diagram">
+    </figure>
+
+    <p>Next sampling of this model was done with the weights of the model at 5 and 20 epochs. The sampling was done according to the following algorithm: </p>
+
+    <figure>
+        <img src=./assets/pt_b/tc_sampling.png style="max-width: 700px; height: auto;" alt="UNet_diagram">
+    </figure>
+
+    <p>Below are some the results from this sampling. As we can see, the class conditioning has significantly improved our results.</p>
+
+
+    <table>
+        <tr><b>Time-Conditioned: Sampling from Epoch 5</b></tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.3/ep5_1.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.3/ep5_2.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.3/ep5_3.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.3/ep5_4.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+        </tr>
+    </table>
+    <table>
+        <tr><b>Time-Conditioned: Sampling from Epoch 20</b></tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.3/ep20_1.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.3/ep20_2.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.3/ep20_3.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.3/ep20_4.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <h2>Class-Conditioned UNet</h2>
+    <p>Similar to what we did in CFG, we can improve the results of our model if we do some class conditioning. This was implemented by adding 
+        two more fully connected layers that took in a one-hot vector describing the class of the digit we are trying to denoise. A dropout of this 
+        class conditioning was implemented as well where 10% of the time the class conditioning vector \(c\) was dropped. The training algorithm for 
+        the class-conditioned UNet looked like the following:
+    </p>
+
+    <figure>
+        <img src=./assets/pt_b/2.5/cc_unet_train.png style="max-width: 700px; height: auto;" alt="UNet_diagram">
+    </figure>
+
+    <p>The training loss of this model over 20 epochs is as follows: </p>
+
+    <figure>
+        <img src=./assets/pt_b/2.5/loss_plot.png style="max-width: 500px; height: auto;" alt="UNet_diagram">
+    </figure>
+
+    <p>The following algorithm was used to sample from the model at 5 and 20 epochs:</p>
+
+    <figure>
+        <img src=./assets/pt_b/2.5/cc_unet_sampling.png style="max-width: 700px; height: auto;" alt="UNet_diagram">
+    </figure>
+
+    <p>Here are some the results from this sampling:</p>
+
+
+    <table>
+        <tr><b>Class-Conditioned: Sampling from Epoch 5</b></tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.5/ep5_1.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.5/ep5_2.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.5/ep5_3.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.5/ep5_4.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+        </tr>
+    </table>
+    <table>
+        <tr><b>Class-Conditioned: Sampling from Epoch 20</b></tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.5/ep20_1.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.5/ep20_2.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.5/ep20_3.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/pt_b/2.5/ep20_4.png style="max-width: 1000px; height: auto;" alt="teja_tri_mesh">
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+
+
+
+</table>
+</table>
+</table>
+</body>
+</html>
