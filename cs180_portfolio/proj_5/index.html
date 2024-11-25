@@ -163,7 +163,7 @@
 
             $$x_t = \sqrt{\bar{\alpha}}x_0 + \sqrt{1 - \bar{\alpha}\epsilon}, \epsilon ~ \mathcal{N}(0, 1)$$
 
-            Each of \(\bar{\alpha}\) is provide from the model. Here are some examples of the foward process being applied to an imagine of the Campanile 
+            Each of \(\bar{\alpha}\) is provided from the model. Here are some examples of the foward process being applied to an imagine of the Campanile 
             on Berkeley campus: 
         </p>
         
@@ -198,7 +198,7 @@
 
         <h2>Classical Denoising</h2>
         <p>
-            Below I attempt a naive method of denoising which involves passing applying a Gaussian filter on each noisy image. This evidently is not a great 
+            Below I attempt a naive method of denoising which involves applying a Gaussian filter on each noisy image. This evidently is not a great 
             solution and its effectiveness decreases as the amount of noise applied increases.
         </p>
 
@@ -212,13 +212,13 @@
                 </td>
                 <td>
                     <figure>
-                        <img src=./assets/pt_a/1.2/gauss_250.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <img src=./assets/pt_a/1.2/gauss_500.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
                         <figcaption>Gaussian Blur Denoising: t = 500</figcaption>
                     </figure>
                 </td>
                 <td>
                     <figure>
-                        <img src=./assets/pt_a/1.2/gauss_250.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
+                        <img src=./assets/pt_a/1.2/gauss_750.png style="max-width: 300px; height: auto;" alt="teja_tri_mesh">
                         <figcaption>Gaussian Blur Denoising: t = 750</figcaption>
                     </figure>
                 </td>
@@ -256,7 +256,7 @@
         </table>
 
         <p>
-            We can see that as t gets larger, our one step denoising results in an image that looks roughly good, but furhter away from the orignal 
+            We can see that as t gets larger, our one step denoising results in an image that looks roughly good, but further away from the orignal 
             image of the Campanile.
         </p>
 
@@ -265,11 +265,11 @@
         <p>
             Since one step denosing performs worse as the amount of noise in the image increases, we can try iteratively denoising our image starting at 
             timestep \(T = 1000\). Since taking individual steps until we reach \(t = 0\) would be very expensive, we taking steps with a stride of 30. 
-            For a timestep \(t' \lt t\), we denoised image in the following manner:
+            For a timestep \(t' \lt t\), we denoise image in the following manner:
 
             $$x_{t'} = \frac{\sqrt{\bar{\alpha_{t'}}}\beta_t}{1 - \bar{\alpha_t}}x_0 + \frac{\sqrt{\alpha_t}(1 - \bar{\alpha_{t'}})}{1 - \bar{\alpha_t}} x_t + v_{\sigma} $$
 
-            where, \(\bar{\alpha_t}\) is defined by the model, \(\frac{\bar{\alpha_t}}{\bar{\alpha_{t'}}}\), \(\beta_t = 1 - \alpha_t\), and \(v_{\sigma}\)
+            where, \(\bar{\alpha_t}\) is defined by the model, \(\alpha_t = \frac{\bar{\alpha_t}}{\bar{\alpha_{t'}}}\), \(\beta_t = 1 - \alpha_t\), and \(v_{\sigma}\)
              is random noise predicted by the model.
 
              Below are images as the appear throughout the denoising process as well as the final product compared to the one step denoising, the gaussian blurring, 
@@ -1074,10 +1074,10 @@
     <h2>Visual Anagrams</h2>
     <p>
         We can also use CFG to create optical illusions. In this section, I show anagrams that I created. To do this we can predict the noise for two 
-        separate text prompts and average them together for each iteration. For both the conditional noise, unconditional noise, and predicted variance, 
+        separate text prompts and average them together for each iteration. For the conditional noise, unconditional noise, and predicted variance, 
         values were predicted with 
         one prompt on our image normally, and then the image is rotated \(180^{\circ}\) and then values are predicted with this flipped image and the 
-        other prompt, which are flipped before averaging. Below are some of the anagrams that were created. I also passed the results through an upsampler 
+        other prompt. The predicted noise is also flipped before averaging. Below are some of the anagrams that were created. I also passed the results through an upsampler 
         provided in the downloaded model.
     </p>
 
@@ -1175,8 +1175,8 @@
 
     <p>
         In a similar way to making anagrams, we can make hybrid images. We still predict the noise of two different prompts, but we initially pass the 
-        original image into the model twice, and then apply a low pass filter onto one set predicted noises and variacne and a high pass filter onto the other  
-        set of predicted noises and variances. Through this process, we get a hybrid image that looks like one thing from afar where low frequencies are 
+        original image into the model twice, and then apply a low pass filter onto one set of predicted noises and variance and a high pass filter onto the other  
+        set of predicted noises and variance. Through this process, we get a hybrid image that looks like one thing from afar where low frequencies are 
         dominant, and another thing up close, where high frequencies are dominant. Below are some samples that I created as well as the upsampled version:
     </p>
 
@@ -1274,7 +1274,7 @@
     <h1>Part B: Diffusion Models from Scratch!</h1>
     <h2>Overview</h2>   
     <p> 
-        In this part of the project, I work on creating a diffusion model from scratch and implement in on the MNIST dataset of hand written numbers.
+        In this part of the project, I work on creating a diffusion model from scratch and implement it on the MNIST dataset of hand written numbers.
     </p>
 
     <h2>Training a Single-Step Denoising UNet</h2>
@@ -1624,7 +1624,7 @@
 
     <p>Additionally we do the following:</p>
     <p>Define a list of \(\beta\)'s starting at \(\beta_0 = 0.0001\) and ends at \(\beta_T = \beta_{300} = 0.2\) with an even spacing of values in between.</p>
-    <p>(\alpha_t = 1 - \beta_t\)</p>
+    <p>\(\alpha_t = 1 - \beta_t\)</p>
     <p>\(\bar{\alpha_t} = \prod_{s=1}^{t} \alpha_{t}\)</p>
 
     <p>
@@ -1652,7 +1652,7 @@
         <img src=./assets/pt_b/tc_sampling.png style="max-width: 700px; height: auto;" alt="UNet_diagram">
     </figure>
 
-    <p>Below are some the results from this sampling. As we can see, the class conditioning has significantly improved our results.</p>
+    <p>Below are some the results from this sampling. As we can see, the time conditioning has significantly improved our results,  but there is still some room for imporvement.</p>
 
 
     <table>
