@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CS 180 Final Project</title>
+    <script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: antiquewhite;
+        }
+
+        header {
+            background-color: #6dc070;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        section {
+            padding: 20px;
+        }
+
+        img {
+            width: 100%;
+            max-width: 350px;
+            height: auto;
+            display: block;
+            margin: 0 auto 20px;
+        }
+
+        /* Styling for the table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table, th, td {
+            border: 1px solid antiquewhite;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border: none;
+        }
+
+        td img {
+            max-width: 400px;
+            height: auto;
+        }
+        figure {
+            text-align: center; 
+            margin: 0 auto; 
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Main Header -->
+    <header>
+        <h1>CS 180 Final Project: Gradient Domain Fusion & Lightfield Camera</h1>
+        <h2>Teja Kanthamneni</h2>
+    </header>
+    
+    <section>
+        <p>For this final project, I completed two separate projects of my choice. Both projects are displayed below on this webpage.</p>
+
+        
+        <h1>Project 1: Gradient Domain Fusion</h1>
+        <h2>Overview</h2>
+
+        <p>
+            Previously, I have done image blending by using Gaussian and Laplacian stacks to blend different frequencies of images independently. This 
+            overall does result in a smooth transition from one image to another, however it is not the best tool for editing in images in a photo-realistic 
+            manner. This is especially true when the colors of the iamges are not similar.
+        </p>
+        <p>
+            In an attempt to remedy this, I implement Poisson blending. Since our eyes are more sensitive to an image's gradient 
+            than to the overall pixel intensity, we can modify the intensity of the pixels in the source image to closely match the gradients of the target 
+            image. We can do this by setting up the following least squares optimization problem:
+
+            $$\vec{v} = \underset{\vec{v}}{\arg\min} \sum_{i \in S, j \in N_i \cap S} ( (v_i - v_j) - (s_i - s_j) )^2 
+            + \sum_{i \in S, j \in N_i \cap \neg S} ( (v_i - t_j) - (s_i - s_j) )^2 $$
+
+            Note that the above equation has some redundant terms, which is not accurate. It is written this way for simplicity. All differences are weighted
+            equally in this optimization
+        </p>
+        <p>
+            In the interior of our source image, for each pixel \(i\) and each pixel \(j\) in the 4-neighborhood around \(i\), we want to minimize the sum of squared 
+            differences between gradient of the new pixels' insensity \(v_i - v_j\) and the gradient of the source image's pixel insentiy \(s_i - s_j\). For 
+            the pixels along the border of our source image we minimize the sum of squared differences between \(v_i - t_j\) and \(s_i - s_j\), where \(t_j\) 
+            is a pixel on our target image. This optimization ensures that the gradients of our new pixels match closely to that of the source image. To solve 
+            this least squares problem, we set up the system \(A\vec{v} = \vec{b}\), where \(A\) is a sparse matrix, and solve for the optimal 
+            solution \(\vec{v}^* = (A^TA)^{-1}A^T \hspace{1pt}\vec{b}\). After this, the elements of vector \(\vec{v}^*\) are assigned accordingly to the 
+            pixels in our blended image.
+        </p>
+
+        <h2>Toy Problem</h2>
+        <p>
+            While implementing the above process is not too difficult, it is easy to make mistakes, especially in the creation of \(A\) and \(\vec{b}\). 
+            So, I first tested this algorithm on a toy problem, in which I simply reconstructed an image instead of blending one image into another. Note 
+            that since there is no target image, no equations from the second summation above were included here. This also required me add another 
+            contraint, \(v(0,0) = s(0,0)\). This sets that the top left corner of our new image to have the same pixel value as the source image. 
+            This was done because without this constraint, there would be multiple sets of pixel insenties that would be valid. Adding this 
+            constraint, our reconstruction becomes perfect. Below is the result of this process.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/toy_problem.png style="max-width: 300px; height: auto;" alt="no_image">
+                        <figcaption>Original Image</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/toy_recon.png style="max-width: 300px; height: auto;" alt="no_image">
+                        <figcaption>Reconstructed Image</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Poisson Blending</h2>
+        <p>
+            To perform Poisson blending, I first had to create a mask around the relevant pixels in the source image and choose a location  
+            to place them in the target image. After this, I simply set up the above least squares optimization problem as is into the system \(A\vec{v} = \vec{b}\)  
+            for each color channel and solved for each color's \(\vec{v}^*\). After doing this, I set the desired pixel values in the target image to the corresponding 
+            elements in \(\vec{v}^*\). Below are some results of this process. I include images of the source image mask, an initial replacement of pixels
+            in the target image, and the output of the Poisson blending.
+        </p>
+        
+        <h3>Results</h3>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/penguin_mask.png style="max-width: 300px; height: auto;" alt="no_image">
+                        <figcaption>Mask</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/penguin_no_blend.png style="max-width: 300px; height: auto;" alt="no_image">
+                        <figcaption>No Blending</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/penguin.png style="max-width: 300px; height: auto;" alt="no_image">
+                        <figcaption>Poisson Blending</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/nebula_night2_mask.png style="max-width: 400px; height: auto;" alt="no_image">
+                        <figcaption>Mask</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/nebula_night2_no_blend.png style="max-width: 400px; height: auto;" alt="no_image">
+                        <figcaption>No Blending</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/nebula_night2.png style="max-width: 400px; height: auto;" alt="no_image">
+                        <figcaption>Poisson Blending</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/cows2_mask.png style="max-width: 400px; height: auto;" alt="no_image">
+                        <figcaption>Mask</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/cows2_no_blend.png style="max-width: 400px; height: auto;" alt="no_image">
+                        <figcaption>No Blending</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/cows2.png style="max-width: 400px; height: auto;" alt="no_image">
+                        <figcaption>Poisson Blending</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+        <p>
+            The three blendings above were overall quite good. Aside from discrepencies such as relative size of objects and abscence of shadows, it 
+            seems like the source images are a part of the target image. In each of these situations, the color of objects did change slightly, but 
+            these changes aren't very obvious in the final images and are reasonable given the difference in lighting.
+            
+        </p>
+
+        <h3>Failures (Depending on Your Opinion)</h3>
+        <p>
+            Below are some image blends that did ultimately change the color of the source too much to seem realistic. However in the 
+            images below, I think these color changes ended up being pretty cool.
+        </p>
+
+        <table class="center">
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/moon_glade_mask.png style="max-width: 400px; height: auto;" alt="no_image">
+                        <figcaption>Mask</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/moon_glade_no_blend.png style="max-width: 400px; height: auto;" alt="no_image">
+                        <figcaption>No Blending</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/moon_glade.png style="max-width: 400px; height: auto;" alt="no_image">
+                        <figcaption>Poisson Blending</figcaption>
+                    </figure>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/sky_whale_mask.png style="max-width: 400px; height: auto;" alt="no_image">
+                        <figcaption>Mask</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/sky_whale_no_blend.png style="max-width: 400px; height: auto;" alt="no_image">
+                        <figcaption>No Blending</figcaption>
+                    </figure>
+                </td>
+                <td>
+                    <figure>
+                        <img src=./assets/grad_fusion/sky_whale.png style="max-width: 400px; height: auto;" alt="no_image">
+                        <figcaption>Poisson Blending</figcaption>
+                    </figure>
+                </td>
+            </tr>
+        </table>
+
+    <h2>Bells and Whistles: Mixed Gradients</h2>
+    <p>
+        As an extension to Poisson blending I implented a mixed gradients method, in which the optimization problem was modified to be the following:
+
+        $$\vec{v} = \underset{\vec{v}}{\arg\min} \sum_{i \in S, j \in N_i \cap S} ( (v_i - v_j) - d_{ij} )^2 
+            + \sum_{i \in S, j \in N_i \cap \neg S} ( (v_i - t_j) - d_{ij} )^2 $$
+
+        where \(d_{ij} = s_i - s_j\) if \(|s_i - s_j| \geq |t_i - t_j|\) and \(d_{ij} = t_i - j_j\) if \(|t_i - t_j| \lt |s_i - s_j|\)
+    </p>
+    <p>
+        This change makes it so that we compare the gradient of our new pixel to the gradient of the source or target image, depending on which one has 
+        the greater magnitude. Then just like for Poisson, we solve a least squares system. This process is very good at blending images onto textured 
+        surfaces. Below are some results of this process. My favorite image is the shirt, because you can really see the texture and folds of the shirt 
+        in the new image. It makes it look like the logo is actually on the shirt.
+    </p>
+
+    <table class="center">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/grad_fusion/logo_shirt_mask.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>Mask</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/grad_fusion/logo_shirt_no_blend.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>No Blending</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/grad_fusion/logo_shirt.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>Mixed Gradients Blending</figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/grad_fusion/desk_art_mask.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>Mask</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/grad_fusion/desk_art_no_blend.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>No Blending</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/grad_fusion/desk_art.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>Mixed Gradients Blending</figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+</section>
+
+<section>
+    <h1>Project 2: Lightfield Camera</h1>
+    <h2>Overivew</h2>
+    <p>
+        This project is based on the paper <a href="http://graphics.stanford.edu/papers/lfcamera/lfcamera-150dpi.pdf">Light Field Photography with a 
+        Hand-held Plenoptic Camera</a> (Ng, et al.) in which the authors demonstrate that capturing images of a scene in various locations on a plane 
+        orthogonal to the optical axis can be used to achieve various camera effects with simple operations such as shifting and averaging. In this 
+        project, I use the rectified images of a chess board from <a href="http://lightfield.stanford.edu/lfs.html">The (New) Stanford Light Field Archive</a>, 
+        which were taken in a grid fashion (given a center image, the camera was shifted in various of x and y directions).
+    </p>
+
+    <h2>Depth Refocusing</h2>
+    <p>
+        When images are taken at these various positions on the same plane, objects that are further away from the camera move less in the image than 
+        objects closer to the camera. When all these images in the grid are averaged, the result will be an image that is sharp far away 
+        from the camera, and increasingly blurry as we get closer to the camera. This mimics a camera being focused on the objects at a greater 
+        depth. It turns out that by shifting each image appropriately and then averaging, we can change the "focus" of the image, making it sharp and 
+        various depths. In my implementation, I used the coordinate values provided in the file names of each image to determine thier distances from 
+        the center image and shifted them by a proportional amount towards the center image. Specifically, I computed <code>dx, dy = [x_mid, y_mid] - [x_i, y_i]</code> for each 
+        image <code>i</code> and shifted that image <code>int(c*dx)</code> pixels to the right and <code>int(c*dy)</code> pixels down.
+    </p>
+
+    <p>
+        Below are some results of averaging all the images in the grid with various values of c: 
+    </p>
+
+    <table class="center">
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_rf/c_0.1.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>c = 0.1</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_rf/c_-0.0.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>c = 0.0</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_rf/c_-0.1.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>c = -0.1</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_rf/c_-0.2.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>c = -0.2</figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_rf/c_-0.3.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>c = -0.3</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_rf/c_-0.4.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>c = -0.4</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_rf/c_-0.5.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>c = -0.5</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_rf/c_-0.6.png style="max-width: 300px; height: auto;" alt="no_image">
+                    <figcaption>c = -0.6</figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <p>
+        Additionally, I created a gif that transitions through a sequence of these images with various c values. For this gif, I ranged c from 0.1 to 
+        -0.6, with a step size of -0.02.
+    </p>
+
+    <table>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_refocus.gif style="max-width: 700px; height: auto;" alt="no_image">
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <h2>Aperture Adjustment</h2>
+    <p>
+        We can also use these images to mimic cameras with different apetures. Averaging many shifted images is akin to taking a picture with a large 
+        aperture. This makes sense becuse, with a large aperture picutre, areas of the image further away from the focus depth are able to reflect light into 
+        the camera from many different angles, causing blurring. On the other hand, when the aperture is small, more things are in focus because less 
+        light is allowed into the camera and the camera doesn't receive light from as many angles. To implement this, I fixed <code>c = -0.5</code>, and 
+        then decided which of images to inlcude in my average by thresholding their distance from the center of the image by some radius r. Specifically, 
+        I would include an image if <code>max(abs(dx), abs(dy)) <= r</code>. 
+    </p>
+    <p>
+        Below are some sample images with various values of r as a threshold:
+    </p>
+
+    <table>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_aa/r_4.png style="max-width: 400px; height: auto;" alt="no_image">
+                    <figcaption>r = 4</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_aa/r_12.png style="max-width: 400px; height: auto;" alt="no_image">
+                    <figcaption>r = 12</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_aa/r_20.png style="max-width: 400px; height: auto;" alt="no_image">
+                    <figcaption>r = 20</figcaption>
+                </figure>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_aa/r_28.png style="max-width: 400px; height: auto;" alt="no_image">
+                    <figcaption>r = 28</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_aa/r_36.png style="max-width: 400px; height: auto;" alt="no_image">
+                    <figcaption>r = 36</figcaption>
+                </figure>
+            </td>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_aa/r_44.png style="max-width: 400px; height: auto;" alt="no_image">
+                    <figcaption>r = 44</figcaption>
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <p>
+        I also created a gif of different aperture adjustments. I had r range from 4 to 46, with a step size of 2. With <code>r = 4</code>, 
+        only the center image was included and with <code>r = 46</code>, all 289 images from the grid were included. 
+    </p>
+    
+    <table>
+        <tr>
+            <td>
+                <figure>
+                    <img src=./assets/lightfield/chess_aperture.gif style="max-width: 700px; height: auto;" alt="no_image">
+                </figure>
+            </td>
+        </tr>
+    </table>
+
+    <p>
+        Overall this project was very fun! It was cool to see that lightfields allow operations as simple as shifting and averaging to have interesting 
+        effects. Working on this project definitley helped me to better understand lightfields and the plenoptic function as concepts.
+    </p>
+
+
+</section>
+</body>
+
+
+
+
+
+</html>
